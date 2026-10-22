@@ -25,6 +25,8 @@ struct OnboardingView: View {
     }
 
     @AppStorage(PrefKey.locationCaptureEnabled) private var locationCaptureEnabled = true
+    @AppStorage(PrefKey.reminderEnabled) private var reminderEnabled = true
+    @AppStorage(PrefKey.reminderMinutes) private var reminderMinutes = Preferences.defaultReminderMinutes
     @State private var location = LocationService.shared
     @State private var step: Step = .intro
     @State private var waitingForLocation = false
@@ -70,11 +72,29 @@ struct OnboardingView: View {
                 message: "스택을 남긴 위치를 함께 저장하면 나중에 정리할 때 기억이 쉬워져요. 위치는 기기에만 저장되고, 허용하지 않아도 스택은 정상적으로 남아요."
             )
         case .notification:
-            OnboardingPage(
-                symbol: "bell.badge.fill",
-                title: "밤 10시에\n정리 알림을 드릴게요",
-                message: "정리하지 않은 스택이 있을 때만 알려드려요. 알림 시각은 설정에서 바꿀 수 있어요."
-            )
+            VStack(alignment: .leading, spacing: 24) {
+                OnboardingPage(
+                    symbol: "bell.badge.fill",
+                    title: "하루의 지출은\n언제 정리할까요?",
+                    message: "정리하지 않은 스택이 있을 때만 이 시각에 알려드려요. 설정에서 언제든 바꿀 수 있어요."
+                )
+                VStack(spacing: 0) {
+                    Toggle("정리 알림 받기", isOn: $reminderEnabled)
+                        .padding(.vertical, 12)
+                    if reminderEnabled {
+                        Divider()
+                        DatePicker(
+                            "알림 시각",
+                            selection: Preferences.reminderTimeBinding($reminderMinutes),
+                            displayedComponents: .hourAndMinute
+                        )
+                        .padding(.vertical, 8)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 16))
+                .animation(.default, value: reminderEnabled)
+            }
         case .backTap:
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingPage(
@@ -117,14 +137,14 @@ struct OnboardingView: View {
                 }
             }
         case .notification:
-            VStack(spacing: 8) {
-                primaryButton("알림 허용하기") {
-                    Task {
+            // 알림을 쓰기로 한 경우에만 권한을 묻는다. 거부해도 다음 단계로 넘어간다.
+            primaryButton("계속") {
+                Task {
+                    if reminderEnabled {
                         await ReminderScheduler.requestAuthorizationIfNeeded()
-                        advance()
                     }
+                    advance()
                 }
-                secondaryButton("나중에") { advance() }
             }
         case .backTap:
             primaryButton("시작하기") { onFinish() }

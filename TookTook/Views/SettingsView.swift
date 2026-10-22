@@ -24,17 +24,6 @@ struct SettingsView: View {
 
     private var store: StackStore { StackStore(context: context) }
 
-    private var reminderTime: Binding<Date> {
-        Binding {
-            Calendar.current.date(
-                bySettingHour: reminderMinutes / 60, minute: reminderMinutes % 60, second: 0, of: .now
-            ) ?? .now
-        } set: { date in
-            let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-            reminderMinutes = (components.hour ?? 22) * 60 + (components.minute ?? 0)
-        }
-    }
-
     var body: some View {
         NavigationStack {
             Form {
@@ -61,7 +50,7 @@ struct SettingsView: View {
                 Section {
                     Toggle("정리 알림", isOn: $reminderEnabled)
                     if reminderEnabled {
-                        DatePicker("알림 시각", selection: reminderTime, displayedComponents: .hourAndMinute)
+                        DatePicker("알림 시각", selection: Preferences.reminderTimeBinding($reminderMinutes), displayedComponents: .hourAndMinute)
                     }
                 } header: {
                     Text("정리 알림")

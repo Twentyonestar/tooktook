@@ -13,12 +13,34 @@ enum PrefKey {
 enum Preferences {
     static let defaultReminderMinutes = 22 * 60
 
-    static var reminderEnabled: Bool {
-        UserDefaults.standard.object(forKey: PrefKey.reminderEnabled) as? Bool ?? true
+    static var reminderEnabled: Bool { reminderEnabled(in: .standard) }
+
+    static var reminderMinutes: Int { reminderMinutes(in: .standard) }
+
+    static func reminderEnabled(in defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: PrefKey.reminderEnabled) as? Bool ?? true
     }
 
-    static var reminderMinutes: Int {
-        UserDefaults.standard.object(forKey: PrefKey.reminderMinutes) as? Int ?? defaultReminderMinutes
+    static func reminderMinutes(in defaults: UserDefaults) -> Int {
+        defaults.object(forKey: PrefKey.reminderMinutes) as? Int ?? defaultReminderMinutes
+    }
+
+    /// 저장된 분 값을 DatePicker에 쓸 오늘 날짜의 시각으로 바꾼다.
+    static func reminderDate(fromMinutes minutes: Int, calendar: Calendar = .current, on day: Date = .now) -> Date {
+        calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day) ?? day
+    }
+
+    /// DatePicker에서 고른 시각을 자정 기준 분 값으로 바꾼다. 날짜와 초는 버린다.
+    static func reminderMinutes(from date: Date, calendar: Calendar = .current) -> Int {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
+    }
+
+    static func reminderTimeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
+        Binding(
+            get: { reminderDate(fromMinutes: minutes.wrappedValue) },
+            set: { minutes.wrappedValue = reminderMinutes(from: $0) }
+        )
     }
 
     static var locationCaptureEnabled: Bool {
