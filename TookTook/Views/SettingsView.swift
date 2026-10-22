@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(PrefKey.appearance) private var appearance = Appearance.system.rawValue
 
     @State private var location = LocationService.shared
+    @State private var notificationPermission = NotificationPermission.shared
     @State private var exportDocument: BackupDocument?
     @State private var showExporter = false
     @State private var showImporter = false
@@ -52,10 +53,13 @@ struct SettingsView: View {
                     if reminderEnabled {
                         DatePicker("알림 시각", selection: Preferences.reminderTimeBinding($reminderMinutes), displayedComponents: .hourAndMinute)
                     }
+                    if reminderAvailability == .blockedBySystem {
+                        NotificationDeniedBanner()
+                    }
                 } header: {
                     Text("정리 알림")
                 } footer: {
-                    Text("정리하지 않은 스택이 있을 때만 알려드려요.")
+                    Text(reminderFooter)
                 }
 
                 Section("화면") {
@@ -81,6 +85,7 @@ struct SettingsView: View {
             .onChange(of: reminderEnabled) { _, enabled in
                 Task {
                     if enabled { await ReminderScheduler.requestAuthorizationIfNeeded() }
+                    await notificationPermission.refresh()
                     await ReminderScheduler.refresh(pendingCount: store.pendingCount())
                 }
             }
@@ -123,6 +128,20 @@ struct SettingsView: View {
                 Text(infoMessage ?? "")
             }
             .errorAlert($errorMessage)
+        }
+    }
+
+    private var reminderAvailability: ReminderAvailability {
+        notificationPermission.availability(enabled: reminderEnabled)
+    }
+
+    /// 실제로 알림이 가지 않는 상태에서는 가는 것처럼 안내하지 않는다.
+    private var reminderFooter: String {
+        switch reminderAvailability {
+        case .active, .unknown: "정리하지 않은 스택이 있을 때만 알려드려요."
+        case .needsPermission: "알림 권한을 허용하면 이 시각에 알려드려요."
+        case .blockedBySystem: "지금은 알림이 오지 않아요. 선택한 시각은 저장돼 있어서, 권한을 허용하면 바로 다시 예약돼요."
+        case .off: "알림을 꺼도 언제든 스택 탭에서 정리할 수 있어요."
         }
     }
 

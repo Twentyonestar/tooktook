@@ -32,8 +32,9 @@ enum ReminderScheduler {
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
-    static func isDenied() async -> Bool {
-        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .denied
+    /// iOS 권한이 없으면 예약해도 전달되지 않으므로 예약하지 않는다.
+    static func canSchedule(authorization: UNAuthorizationStatus) -> Bool {
+        ReminderAvailability.resolve(enabled: true, authorization: authorization) == .active
     }
 
     /// 순수 계산. 시스템 상태를 건드리지 않으므로 테스트할 수 있다.
@@ -65,6 +66,8 @@ enum ReminderScheduler {
     static func refresh(pendingCount: Int, now: Date = .now) async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: allIdentifiers)
+        // 권한을 다시 허용하면 앱 활성화 때 이 함수가 다시 불려 저장된 시각으로 복구된다.
+        guard canSchedule(authorization: await center.notificationSettings().authorizationStatus) else { return }
 
         let calendar = Calendar.current
         let reminders = plan(

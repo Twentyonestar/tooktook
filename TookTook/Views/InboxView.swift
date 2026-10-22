@@ -8,7 +8,6 @@ struct CompletionSession: Identifiable {
 
 struct InboxView: View {
     @Environment(\.modelContext) private var context
-    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PrefKey.reminderEnabled) private var reminderEnabled = true
 
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" }, sort: \Stack.createdAt)
@@ -23,7 +22,7 @@ struct InboxView: View {
     @State private var session: CompletionSession?
     @State private var lastDiscarded: Stack?
     @State private var undoTask: Task<Void, Never>?
-    @State private var notificationsDenied = false
+    @State private var notificationPermission = NotificationPermission.shared
     @State private var errorMessage: String?
 
     private var store: StackStore { StackStore(context: context) }
@@ -42,7 +41,7 @@ struct InboxView: View {
     var body: some View {
         NavigationStack {
             List {
-                if notificationsDenied && reminderEnabled {
+                if notificationPermission.availability(enabled: reminderEnabled) == .blockedBySystem {
                     Section {
                         NotificationDeniedBanner()
                     }
@@ -108,9 +107,6 @@ struct InboxView: View {
                 CompletionFlowView(stacks: session.stacks)
             }
             .errorAlert($errorMessage)
-            .task(id: scenePhase) {
-                notificationsDenied = await ReminderScheduler.isDenied()
-            }
         }
     }
 
@@ -291,9 +287,9 @@ struct NotificationDeniedBanner: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("알림이 꺼져 있어요", systemImage: "bell.slash")
+            Label("정리 알림이 꺼져 있어요", systemImage: "bell.slash")
                 .font(.headline)
-            Text("오후 정리 알림을 받으려면 설정에서 툭툭가계부의 알림을 허용해 주세요. 알림 없이도 언제든 여기서 정리할 수 있어요.")
+            Text("iPhone 설정에서 알림을 허용하면 원하는 시간에 미정리 스택을 알려드릴게요.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("알림 설정 열기") {
@@ -303,5 +299,6 @@ struct NotificationDeniedBanner: View {
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
     }
 }

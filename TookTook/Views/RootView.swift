@@ -37,13 +37,17 @@ struct RootView: View {
         .fullScreenCover(isPresented: Binding(get: { !hasCompletedOnboarding }, set: { _ in })) {
             OnboardingView {
                 hasCompletedOnboarding = true
-                Task { await ReminderScheduler.refresh(pendingCount: pendingStacks.count) }
+                Task {
+                    await NotificationPermission.shared.refresh()
+                    await ReminderScheduler.refresh(pendingCount: pendingStacks.count)
+                }
             }
             .interactiveDismissDisabled()
         }
         .task {
             // 권한 요청은 온보딩에서만 한다.
             StackStore(context: context).seedDefaultCategoriesIfNeeded()
+            await NotificationPermission.shared.refresh()
             await ReminderScheduler.refresh(pendingCount: pendingStacks.count)
         }
         .onChange(of: pendingStacks.count) { _, count in
@@ -58,6 +62,11 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await LocationEnricher.resolvePlaceLabels(in: context) }
+            // 설정 앱에서 알림 권한을 바꾸고 돌아왔을 수 있다. 다시 확인하고 예약을 맞춘다.
+            Task {
+                await NotificationPermission.shared.refresh()
+                await ReminderScheduler.refresh(pendingCount: pendingStacks.count)
+            }
         }
     }
 }
