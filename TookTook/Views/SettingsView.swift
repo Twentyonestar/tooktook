@@ -98,7 +98,7 @@ struct SettingsView: View {
                 isPresented: $showExporter,
                 document: exportDocument,
                 contentType: .json,
-                defaultFilename: "tooktook-backup-\(Date.now.formatted(.iso8601.year().month().day()))"
+                defaultFilename: BackupService.defaultFilename()
             ) { result in
                 if case .failure(let error) = result { errorMessage = error.localizedDescription }
                 // '먼저 내보내기'에서 왔다면 가져오기 확인으로 돌아간다.

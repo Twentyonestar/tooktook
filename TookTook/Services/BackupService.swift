@@ -97,6 +97,11 @@ enum BackupService {
         )
     }
 
+    /// 내보내기 파일 이름. 사용자의 현지 날짜를 쓴다 (.iso8601은 UTC라 한국 오전 9시 전에는 전날로 찍혔다).
+    nonisolated static func defaultFilename(now: Date = .now, timeZone: TimeZone = .current) -> String {
+        "tooktook-backup-\(now.formatted(Date.ISO8601FormatStyle(timeZone: timeZone).year().month().day()))"
+    }
+
     static func encode(_ payload: BackupPayload) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
