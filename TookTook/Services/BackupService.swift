@@ -138,7 +138,12 @@ enum BackupService {
     }
 
     /// 현재 데이터를 모두 지우고 백업 내용으로 바꾼다.
-    static func restore(_ payload: BackupPayload, into context: ModelContext) throws {
+    /// - Parameter save: 테스트에서 저장 실패를 재현하려고 주입한다. 앱에서는 기본값을 쓴다.
+    static func restore(
+        _ payload: BackupPayload,
+        into context: ModelContext,
+        save: (ModelContext) throws -> Void = { try $0.save() }
+    ) throws {
         try validate(payload)
 
         // 일괄 삭제(delete(model:))는 저장 전에 스토어에 반영될 수 있어 rollback으로 되돌릴 수 없다.
@@ -182,7 +187,7 @@ enum BackupService {
         }
 
         do {
-            try context.save()
+            try save(context)
         } catch {
             context.rollback()
             throw error

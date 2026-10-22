@@ -18,6 +18,8 @@ struct SettingsView: View {
     @State private var showExporter = false
     @State private var showImporter = false
     @State private var pendingImport: BackupPayload?
+    @State private var showImportConfirm = false
+    @State private var currentDataSummary = ""
     @State private var confirmClearLocations = false
     @State private var confirmDeleteAll = false
     @State private var errorMessage: String?
@@ -99,6 +101,8 @@ struct SettingsView: View {
                 defaultFilename: "tooktook-backup-\(Date.now.formatted(.iso8601.year().month().day()))"
             ) { result in
                 if case .failure(let error) = result { errorMessage = error.localizedDescription }
+                // '먼저 내보내기'에서 왔다면 가져오기 확인으로 돌아간다.
+                if pendingImport != nil { showImportConfirm = true }
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
                 loadImport(result)
@@ -108,14 +112,12 @@ struct SettingsView: View {
             } message: {
                 Text("스택과 지출 기록은 그대로 남아요.")
             }
-            .confirmationDialog(
-                "백업으로 덮어쓸까요?",
-                isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }),
-                titleVisibility: .visible
-            ) {
+            .confirmationDialog("백업으로 전체 교체할까요?", isPresented: $showImportConfirm, titleVisibility: .visible) {
                 Button("현재 데이터를 지우고 가져오기", role: .destructive) { applyImport() }
+                Button("현재 데이터 먼저 내보내기") { prepareExport() }
+                Button("취소", role: .cancel) { pendingImport = nil }
             } message: {
-                Text("지금 기기에 있는 스택과 지출 기록은 모두 백업 파일 내용으로 바뀌어요.")
+                Text(importConfirmMessage)
             }
             .confirmationDialog("모든 데이터를 삭제할까요?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
                 Button("전체 삭제", role: .destructive) { deleteAll() }
@@ -180,9 +182,24 @@ struct SettingsView: View {
             let payload = try BackupService.decode(Data(contentsOf: url))
             try BackupService.validate(payload)
             pendingImport = payload
+            currentDataSummary = summarizeCurrentData()
+            showImportConfirm = true
         } catch {
             errorMessage = "백업 파일을 읽을 수 없어요. \(error.localizedDescription)"
         }
+    }
+
+    private var importConfirmMessage: String {
+        guard let payload = pendingImport else { return "" }
+        return "병합하지 않고 전체를 바꿔요. 지금 기기의 \(currentDataSummary)이 모두 지워지고, "
+            + "백업의 스택 \(payload.stacks.count)개·지출 \(payload.transactions.count)건으로 바뀌어요. "
+            + "되돌릴 수 없으니 먼저 현재 데이터를 내보내 두는 걸 권해요."
+    }
+
+    private func summarizeCurrentData() -> String {
+        let stacks = (try? context.fetchCount(FetchDescriptor<Stack>())) ?? 0
+        let transactions = (try? context.fetchCount(FetchDescriptor<LedgerTransaction>())) ?? 0
+        return "스택 \(stacks)개·지출 \(transactions)건"
     }
 
     private func applyImport() {
@@ -192,7 +209,7 @@ struct SettingsView: View {
             try BackupService.restore(payload, into: context)
             infoMessage = "스택 \(payload.stacks.count)개, 지출 \(payload.transactions.count)건을 가져왔어요."
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "가져오지 못했어요. 기존 데이터는 그대로 남아 있어요. (\(error.localizedDescription))"
         }
     }
 

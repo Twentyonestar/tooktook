@@ -105,4 +105,84 @@ struct BackupTests {
         payload.version = BackupService.currentVersion + 1
         #expect(throws: BackupError.self) { try BackupService.validate(payload) }
     }
+
+    @Test func saveFailureDuringRestoreKeepsExistingData() throws {
+        // 기기에 이미 있는 데이터
+        let target = try TestStore()
+        let (_, completed) = try makeSampleData(in: target)
+        let before = (
+            stacks: try target.all(Stack.self).map(\.id).sorted { $0.uuidString < $1.uuidString },
+            transactions: try target.all(LedgerTransaction.self).map(\.id),
+            categories: try target.all(ExpenseCategory.self).count
+        )
+
+        // 전혀 다른 백업 파일
+        let other = try TestStore()
+        try other.store.createStack(source: .inApp)
+        let payload = try roundTrip(BackupService.makePayload(from: other.context))
+
+        struct DiskFull: Error {}
+        #expect(throws: DiskFull.self) {
+            try BackupService.restore(payload, into: target.context) { _ in throw DiskFull() }
+        }
+
+        #expect(try target.all(Stack.self).map(\.id).sorted { $0.uuidString < $1.uuidString } == before.stacks)
+        #expect(try target.all(LedgerTransaction.self).map(\.id) == before.transactions)
+        #expect(try target.all(ExpenseCategory.self).count == before.categories)
+        let kept = try #require(target.store.stack(id: completed.id))
+        #expect(kept.placeLabel == "역삼동")
+        #expect(kept.transactionId == before.transactions.first)
+
+        // 저장소에 다시 접근해도(앱 재실행) 같은 상태다
+        let reopened = ModelContext(target.container)
+        #expect(try reopened.fetchCount(FetchDescriptor<Stack>()) == before.stacks.count)
+    }
+
+    @Test func versionOneFileWithoutNewerFieldsStillImports() throws {
+        // 장소 재시도 필드(placeLookupAttempts, placeLabelVersion)가 생기기 전 형식
+        let json = """
+        {
+          "version": 1,
+          "exportedAt": "2026-10-23T00:00:00Z",
+          "categories": [
+            {"id": "11111111-1111-1111-1111-111111111111", "name": "식비", "symbol": "fork.knife", "displayOrder": 0, "isArchived": false}
+          ],
+          "stacks": [
+            {"id": "22222222-2222-2222-2222-222222222222", "createdAt": "2026-10-22T14:09:58Z",
+             "captureSource": "appIntent", "status": "completed", "latitude": 37.4968, "longitude": 126.8802,
+             "horizontalAccuracy": 7.4, "locationStatus": "captured", "placeLabel": "구로동 구로동",
+             "completedAt": "2026-10-22T14:20:00Z", "transactionId": "33333333-3333-3333-3333-333333333333",
+             "isPossibleDuplicate": false}
+          ],
+          "transactions": [
+            {"id": "33333333-3333-3333-3333-333333333333", "sourceStackId": "22222222-2222-2222-2222-222222222222",
+             "amountKRW": 12500, "categoryId": "11111111-1111-1111-1111-111111111111",
+             "occurredAt": "2026-10-22T14:09:58Z", "createdAt": "2026-10-22T14:20:00Z", "updatedAt": "2026-10-22T14:20:00Z"}
+          ]
+        }
+        """
+        let payload = try BackupService.decode(Data(json.utf8))
+        let target = try TestStore()
+        try BackupService.restore(payload, into: target.context)
+
+        let stack = try #require(try target.all(Stack.self).first)
+        #expect(stack.placeLookupAttempts == 0)
+        #expect(stack.placeLabelVersion == 0)   // 예전 형식 라벨이라 다음 실행 때 새 형식으로 교체된다
+        #expect(try target.all(LedgerTransaction.self).first?.amountKRW == 12_500)
+    }
+
+    @Test func roundTripCarriesPlaceRetryState() throws {
+        let source = try TestStore()
+        let stack = try source.store.createStack(source: .appIntent)
+        stack.placeLookupAttempts = 2
+        stack.placeLabelVersion = 1
+        try source.context.save()
+
+        let target = try TestStore()
+        try BackupService.restore(try roundTrip(BackupService.makePayload(from: source.context)), into: target.context)
+
+        let restored = try #require(target.store.stack(id: stack.id))
+        #expect(restored.placeLookupAttempts == 2)
+        #expect(restored.placeLabelVersion == 1)
+    }
 }
