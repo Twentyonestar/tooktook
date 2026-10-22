@@ -217,7 +217,7 @@ struct StackRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(timeText)
                     .font(.headline)
-                Text(stack.placeLabel ?? stack.locationStatus.label)
+                Text(stack.placeDisplay.text)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

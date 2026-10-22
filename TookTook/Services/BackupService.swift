@@ -26,6 +26,9 @@ struct BackupPayload: Codable {
         var transactionId: UUID?
         var discardedAt: Date?
         var isPossibleDuplicate: Bool
+        // 이전 백업 파일에는 없을 수 있어 옵셔널로 둔다.
+        var placeLookupAttempts: Int?
+        var placeLabelVersion: Int?
     }
 
     struct TransactionRecord: Codable {
@@ -81,7 +84,8 @@ enum BackupService {
                     id: $0.id, createdAt: $0.createdAt, captureSource: $0.captureSourceRaw, status: $0.statusRaw,
                     latitude: $0.latitude, longitude: $0.longitude, horizontalAccuracy: $0.horizontalAccuracy,
                     locationStatus: $0.locationStatusRaw, placeLabel: $0.placeLabel, completedAt: $0.completedAt,
-                    transactionId: $0.transactionId, discardedAt: $0.discardedAt, isPossibleDuplicate: $0.isPossibleDuplicate
+                    transactionId: $0.transactionId, discardedAt: $0.discardedAt, isPossibleDuplicate: $0.isPossibleDuplicate,
+                    placeLookupAttempts: $0.placeLookupAttempts, placeLabelVersion: $0.placeLabelVersion
                 )
             },
             transactions: transactions.map {
@@ -165,6 +169,8 @@ enum BackupService {
             stack.completedAt = record.completedAt
             stack.transactionId = record.transactionId
             stack.discardedAt = record.discardedAt
+            stack.placeLookupAttempts = record.placeLookupAttempts ?? 0
+            stack.placeLabelVersion = record.placeLabelVersion ?? 0
             context.insert(stack)
         }
         for record in payload.transactions {

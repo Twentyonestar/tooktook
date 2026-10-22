@@ -10,6 +10,10 @@ struct RootView: View {
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" })
     private var pendingStacks: [Stack]
 
+    /// 좌표는 있는데 장소명이 아직 없는 스택. 개수가 바뀌면(새 좌표 저장, 변환 완료) 변환을 다시 돌린다.
+    @Query(filter: #Predicate<Stack> { $0.locationStatusRaw == "captured" && $0.placeLabel == nil })
+    private var unlabeledStacks: [Stack]
+
     var body: some View {
         TabView(selection: $router.selectedTab) {
             InboxView()
@@ -43,6 +47,11 @@ struct RootView: View {
         }
         .onChange(of: pendingStacks.count) { _, count in
             Task { await ReminderScheduler.refresh(pendingCount: count) }
+        }
+        // 앱을 새로 켰을 때(scenePhase 변화가 없음)와 앱이 열린 채 스택이 생겼을 때도 변환되도록
+        // 개수 변화와 화면 활성화 두 경로에서 모두 실행한다. 겹치는 실행은 LocationEnricher가 막는다.
+        .task(id: unlabeledStacks.count) {
+            await LocationEnricher.resolvePlaceLabels(in: context)
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }

@@ -24,18 +24,6 @@ enum LocationStatus: String, Codable {
     case failed
     case timedOut
     case removed
-
-    var label: String {
-        switch self {
-        case .notRequested: "위치 확인 전"
-        case .disabled: "위치 기록 꺼짐"
-        case .unauthorized: "위치 권한 없음"
-        case .captured: "위치 저장됨"
-        case .failed: "위치 확인 실패"
-        case .timedOut: "위치 확인 시간 초과"
-        case .removed: "위치 삭제됨"
-        }
-    }
 }
 
 /// 결제 순간에 남기는 지출 흔적. 결제 증명이 아니라 사용자가 수동으로 남긴 기록이다 (BR-01).
@@ -55,6 +43,10 @@ final class Stack {
     var discardedAt: Date?
     /// 직전 스택과 너무 가깝게 생성된 경우 표시만 한다. 자동으로 지우지 않는다 (BR-10).
     var isPossibleDuplicate: Bool
+    /// 주소 변환 실패 횟수. PlaceLabelFormatter.maxLookupAttempts에 닿으면 자동 재시도를 멈춘다.
+    var placeLookupAttempts: Int = 0
+    /// placeLabel을 만든 PlaceLabelFormatter.version. 낮으면 새 형식으로 다시 변환한다.
+    var placeLabelVersion: Int = 0
 
     init(
         id: UUID = UUID(),

@@ -83,7 +83,7 @@ struct StackCompletionForm: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(stack.createdAt.formatted(.dateTime.month().day().weekday().hour().minute()))
                         .font(.headline)
-                    Text(stack.placeLabel ?? stack.locationStatus.label)
+                    Label(stack.placeDisplay.text, systemImage: "mappin.and.ellipse")
                         .foregroundStyle(.secondary)
                     if stack.isPossibleDuplicate {
                         Text("바로 앞 스택과 3초 안에 남겨졌어요. 연달아 결제했다면 그대로 정리하면 돼요.")
@@ -92,6 +92,12 @@ struct StackCompletionForm: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
+
+                if stack.placeDisplay.canRetry {
+                    Button("장소 다시 확인") {
+                        Task { await LocationEnricher.retryPlaceLookup(for: stack, in: context) }
+                    }
+                }
             }
 
             Section("금액") {

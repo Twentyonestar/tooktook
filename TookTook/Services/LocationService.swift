@@ -72,63 +72,115 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 }
 
+/// 위치 수집 시점의 조건. 테스트에서 권한·타임아웃 상황을 재현하려고 분리했다.
+enum LocationCaptureResult {
+    case disabled
+    case unauthorized
+    case attempted(LocationOutcome)
+}
+
 /// 스택 저장 이후에 위치를 덧붙인다 (BR-03). 실패해도 스택은 그대로 남는다.
 @MainActor
 enum LocationEnricher {
     static let captureTimeout: Duration = .seconds(4)
-    /// 이보다 부정확하면 주소를 붙이지 않는다.
-    static let maxAccuracyForLabel: Double = 500
-    /// 이보다 부정확하면 동 단위까지만 표시한다.
-    static let maxAccuracyForStreet: Double = 100
+    /// 한 번에 보내는 주소 변환 요청 상한. Apple 지오코딩 사용량 제한을 넘지 않기 위함.
+    static let maxGeocodeRequestsPerRun = 20
+
+    /// 같은 저장소에 대해 변환 작업이 겹치지 않게 한다.
+    private static var resolvingContexts: Set<ObjectIdentifier> = []
 
     static func attachLocation(to stack: Stack, in context: ModelContext) async {
         let service = LocationService.shared
+        let result: LocationCaptureResult
         if !Preferences.locationCaptureEnabled {
-            stack.locationStatus = .disabled
+            result = .disabled
         } else if !service.isAuthorized {
-            stack.locationStatus = .unauthorized
+            result = .unauthorized
         } else {
-            switch await service.requestOneShot(timeout: captureTimeout) {
-            case .located(let location):
-                stack.latitude = location.coordinate.latitude
-                stack.longitude = location.coordinate.longitude
-                stack.horizontalAccuracy = location.horizontalAccuracy
-                stack.locationStatus = .captured
-            case .failed:
-                stack.locationStatus = .failed
-            case .timedOut:
-                stack.locationStatus = .timedOut
-            }
+            result = .attempted(await service.requestOneShot(timeout: captureTimeout))
         }
+        record(result, on: stack)
         try? context.save()
     }
 
-    /// 좌표는 있지만 주소가 없는 스택에 대략적인 지역명을 붙인다. 상호명은 추정하지 않는다.
-    static func resolvePlaceLabels(in context: ModelContext) async {
+    static func record(_ result: LocationCaptureResult, on stack: Stack) {
+        switch result {
+        case .disabled:
+            stack.locationStatus = .disabled
+        case .unauthorized:
+            stack.locationStatus = .unauthorized
+        case .attempted(.located(let location)):
+            stack.latitude = location.coordinate.latitude
+            stack.longitude = location.coordinate.longitude
+            stack.horizontalAccuracy = location.horizontalAccuracy
+            stack.locationStatus = .captured
+        case .attempted(.failed):
+            stack.locationStatus = .failed
+        case .attempted(.timedOut):
+            stack.locationStatus = .timedOut
+        }
+    }
+
+    /// 좌표는 있지만 장소명이 없거나 예전 형식인 스택에 행정구역 이름을 붙인다.
+    /// 스택마다 저장해 중간에 끊겨도 진행분은 남고, 실패해도 좌표는 그대로 둔다.
+    static func resolvePlaceLabels(
+        in context: ModelContext,
+        geocoder: PlaceGeocoding = SystemPlaceGeocoder()
+    ) async {
+        let contextID = ObjectIdentifier(context)
+        guard !resolvingContexts.contains(contextID) else { return }
+        resolvingContexts.insert(contextID)
+        defer { resolvingContexts.remove(contextID) }
+
         let captured = LocationStatus.captured.rawValue
+        let version = PlaceLabelFormatter.version
+        let maxAttempts = PlaceLabelFormatter.maxLookupAttempts
         let descriptor = FetchDescriptor<Stack>(
-            predicate: #Predicate { $0.locationStatusRaw == captured && $0.placeLabel == nil }
+            predicate: #Predicate {
+                $0.locationStatusRaw == captured
+                    && ($0.placeLabel == nil || $0.placeLabelVersion < version)
+                    && $0.placeLookupAttempts < maxAttempts
+            },
+            sortBy: [SortDescriptor(\.createdAt)]
         )
         guard let stacks = try? context.fetch(descriptor), !stacks.isEmpty else { return }
 
-        let geocoder = CLGeocoder()
+        // 같은 좌표(약 10m 격자)는 한 번만 요청한다. nil 값은 이번 실행에서 실패한 좌표.
+        var results: [String: PlaceComponents?] = [:]
+        var requests = 0
         for stack in stacks {
             guard let latitude = stack.latitude, let longitude = stack.longitude,
-                  let accuracy = stack.horizontalAccuracy, accuracy >= 0, accuracy <= maxAccuracyForLabel
+                  let accuracy = stack.horizontalAccuracy, accuracy >= 0,
+                  accuracy <= PlaceLabelFormatter.maxAccuracyForLabel
             else { continue }
 
-            let location = CLLocation(latitude: latitude, longitude: longitude)
-            guard let placemark = try? await geocoder.reverseGeocodeLocation(location).first else { continue }
+            let key = String(format: "%.4f,%.4f", latitude, longitude)
+            let components: PlaceComponents?
+            if let cached = results[key] {
+                components = cached
+            } else {
+                guard requests < maxGeocodeRequestsPerRun else { break }
+                requests += 1
+                components = try? await geocoder.components(for: CLLocation(latitude: latitude, longitude: longitude))
+                results[key] = .some(components)
+            }
 
-            var parts = [placemark.subLocality ?? placemark.locality]
-            if accuracy <= maxAccuracyForStreet {
-                parts.append(placemark.thoroughfare)
-            }
-            let label = parts.compactMap { $0 }.joined(separator: " ")
-            if !label.isEmpty, stack.locationStatus == .captured {
+            // 기다리는 동안 위치가 삭제됐으면 건드리지 않는다.
+            guard stack.locationStatus == .captured else { continue }
+            if let components, let label = PlaceLabelFormatter.label(for: components, accuracy: accuracy) {
                 stack.placeLabel = label
+                stack.placeLabelVersion = version
+            } else {
+                stack.placeLookupAttempts += 1
             }
+            try? context.save()
         }
+    }
+
+    /// 사용자가 '장소 다시 확인'을 눌렀을 때. 과거 좌표 그대로 다시 변환하며 현재 위치는 쓰지 않는다.
+    static func retryPlaceLookup(for stack: Stack, in context: ModelContext) async {
+        stack.placeLookupAttempts = 0
         try? context.save()
+        await resolvePlaceLabels(in: context)
     }
 }
