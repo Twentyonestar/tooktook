@@ -34,8 +34,10 @@ extension View {
 struct MonthSwitcher: View {
     @Binding var month: Date
 
-    private var calendar: Calendar { .current }
-    private var isCurrentMonth: Bool { calendar.isDate(month, inSameMonthAs: .now) }
+    @State private var clock = AppClock.shared
+
+    private var calendar: Calendar { clock.calendar }
+    private var isCurrentMonth: Bool { calendar.isDate(month, inSameMonthAs: clock.now) }
 
     var body: some View {
         HStack {

@@ -8,7 +8,8 @@ struct StatsView: View {
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" })
     private var pendingStacks: [Stack]
 
-    @State private var month = Calendar.current.startOfMonth(for: .now)
+    @State private var clock = AppClock.shared
+    @State private var month = AppClock.shared.calendar.startOfMonth(for: AppClock.shared.now)
 
     private struct CategoryTotal: Identifiable {
         let id: UUID
@@ -24,7 +25,7 @@ struct StatsView: View {
     }
 
     private var monthTransactions: [LedgerTransaction] {
-        transactions.filter { Calendar.current.isDate($0.occurredAt, inSameMonthAs: month) }
+        transactions.filter { clock.calendar.isDate($0.occurredAt, inSameMonthAs: month) }
     }
 
     private var monthTotal: Int64 {
@@ -46,7 +47,7 @@ struct StatsView: View {
     }
 
     private var dayTotals: [DayTotal] {
-        Dictionary(grouping: monthTransactions) { Calendar.current.startOfDay(for: $0.occurredAt) }
+        Dictionary(grouping: monthTransactions) { clock.calendar.startOfDay(for: $0.occurredAt) }
             .map { DayTotal(day: $0.key, amount: $0.value.reduce(0) { $0 + $1.amountKRW }) }
             .sorted { $0.day < $1.day }
     }
@@ -123,6 +124,9 @@ struct StatsView: View {
                 }
             }
             .navigationTitle("통계")
+            .onChange(of: clock.now) { previous, now in
+                month = LedgerPeriod.displayedMonth(month, previousNow: previous, now: now, calendar: clock.calendar)
+            }
         }
     }
 

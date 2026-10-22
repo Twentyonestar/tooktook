@@ -61,6 +61,8 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            // 백그라운드에 있는 동안 날짜나 시간대가 바뀌었을 수 있다.
+            AppClock.shared.tick()
             Task { await LocationEnricher.resolvePlaceLabels(in: context) }
             // 설정 앱에서 알림 권한을 바꾸고 돌아왔을 수 있다. 다시 확인하고 예약을 맞춘다.
             Task {

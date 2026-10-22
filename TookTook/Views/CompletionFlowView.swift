@@ -236,10 +236,10 @@ struct CompletionSummaryView: View {
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" })
     private var pendingStacks: [Stack]
 
+    @State private var clock = AppClock.shared
+
     private var todayTotal: Int64 {
-        transactions
-            .filter { Calendar.current.isDateInToday($0.occurredAt) }
-            .reduce(0) { $0 + $1.amountKRW }
+        LedgerPeriod.todayTotal(transactions, now: clock.now, calendar: clock.calendar)
     }
 
     var body: some View {

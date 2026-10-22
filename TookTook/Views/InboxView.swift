@@ -23,18 +23,19 @@ struct InboxView: View {
     @State private var lastDiscarded: Stack?
     @State private var undoTask: Task<Void, Never>?
     @State private var notificationPermission = NotificationPermission.shared
+    @State private var clock = AppClock.shared
     @State private var errorMessage: String?
 
     private var store: StackStore { StackStore(context: context) }
 
     private var todayPendingCount: Int {
-        pendingStacks.filter { Calendar.current.isDateInToday($0.createdAt) }.count
+        LedgerPeriod.todayPendingCount(pendingStacks, now: clock.now, calendar: clock.calendar)
     }
 
     private var completedToday: [Stack] {
         completedStacks.filter { stack in
             guard let completedAt = stack.completedAt else { return false }
-            return Calendar.current.isDateInToday(completedAt)
+            return LedgerPeriod.isToday(completedAt, now: clock.now, calendar: clock.calendar)
         }
     }
 
@@ -61,7 +62,7 @@ struct InboxView: View {
                             Button {
                                 startSession(from: stack)
                             } label: {
-                                StackRow(stack: stack)
+                                StackRow(stack: stack, now: clock.now)
                             }
                             .tint(.primary)
                             .swipeActions {
@@ -201,6 +202,8 @@ struct InboxView: View {
 
 struct StackRow: View {
     let stack: Stack
+    /// AppClock 기준 '지금'. 자정이 지나면 시각만 보이던 행에 날짜가 붙는다.
+    let now: Date
 
     var body: some View {
         HStack(spacing: 12) {
@@ -239,7 +242,7 @@ struct StackRow: View {
     }
 
     private var timeText: String {
-        if Calendar.current.isDateInToday(stack.createdAt) {
+        if LedgerPeriod.isToday(stack.createdAt, now: now, calendar: .autoupdatingCurrent) {
             return stack.createdAt.formatted(date: .omitted, time: .shortened)
         }
         return stack.createdAt.formatted(.dateTime.month().day().hour().minute())

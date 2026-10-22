@@ -6,15 +6,16 @@ struct HistoryView: View {
     @Query(sort: \LedgerTransaction.occurredAt, order: .reverse) private var transactions: [LedgerTransaction]
     @Query private var categories: [ExpenseCategory]
 
-    @State private var month = Calendar.current.startOfMonth(for: .now)
+    @State private var clock = AppClock.shared
+    @State private var month = AppClock.shared.calendar.startOfMonth(for: AppClock.shared.now)
     @State private var errorMessage: String?
 
     private var monthTransactions: [LedgerTransaction] {
-        transactions.filter { Calendar.current.isDate($0.occurredAt, inSameMonthAs: month) }
+        transactions.filter { clock.calendar.isDate($0.occurredAt, inSameMonthAs: month) }
     }
 
     private var days: [(day: Date, items: [LedgerTransaction])] {
-        Dictionary(grouping: monthTransactions) { Calendar.current.startOfDay(for: $0.occurredAt) }
+        Dictionary(grouping: monthTransactions) { clock.calendar.startOfDay(for: $0.occurredAt) }
             .map { (day: $0.key, items: $0.value) }
             .sorted { $0.day > $1.day }
     }
@@ -63,6 +64,9 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("내역")
+            .onChange(of: clock.now) { previous, now in
+                month = LedgerPeriod.displayedMonth(month, previousNow: previous, now: now, calendar: clock.calendar)
+            }
             .errorAlert($errorMessage)
         }
     }
