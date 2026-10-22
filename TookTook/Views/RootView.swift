@@ -10,9 +10,10 @@ struct RootView: View {
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" })
     private var pendingStacks: [Stack]
 
-    /// 좌표는 있는데 장소명이 아직 없는 스택. 개수가 바뀌면(새 좌표 저장, 변환 완료) 변환을 다시 돌린다.
-    @Query(filter: #Predicate<Stack> { $0.locationStatusRaw == "captured" && $0.placeLabel == nil })
-    private var unlabeledStacks: [Stack]
+    /// 주소 변환 대상 스택. 개수가 아니라 구성(ID 목록)이 바뀔 때마다 변환을 다시 돌린다.
+    /// 예: 대상 A가 삭제되고 B가 생겨 개수가 같아도 실행된다.
+    @Query(filter: Stack.needsPlaceResolution, sort: \Stack.createdAt)
+    private var placeResolutionTargets: [Stack]
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
@@ -49,9 +50,10 @@ struct RootView: View {
             Task { await ReminderScheduler.refresh(pendingCount: count) }
         }
         // 앱을 새로 켰을 때(scenePhase 변화가 없음)와 앱이 열린 채 스택이 생겼을 때도 변환되도록
-        // 개수 변화와 화면 활성화 두 경로에서 모두 실행한다. 겹치는 실행은 LocationEnricher가 막는다.
-        .task(id: unlabeledStacks.count) {
-            await LocationEnricher.resolvePlaceLabels(in: context)
+        // 대상 구성 변화와 화면 활성화 두 경로에서 모두 실행한다. 겹치는 요청은 LocationEnricher가 이어서 처리한다.
+        // .task(id:)는 ID가 바뀌면 진행 중인 변환을 취소하므로, 취소되지 않는 Task로 시작한다.
+        .onChange(of: placeResolutionTargets.map(\.id), initial: true) {
+            Task { await LocationEnricher.resolvePlaceLabels(in: context) }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }

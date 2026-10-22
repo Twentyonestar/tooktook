@@ -39,10 +39,14 @@ final class FakeGeocoder: PlaceGeocoding {
         case success(PlaceComponents)
         case noResult
         case failure
+        case cancelled
     }
 
     var response: Response
     private(set) var requestCount = 0
+    private(set) var requestedLocations: [CLLocationCoordinate2D] = []
+    /// 요청을 받은 직후(응답 전)에 실행된다. 변환 도중에 다른 일이 일어나는 상황을 재현한다.
+    var onRequest: (() async throws -> Void)?
 
     init(_ response: Response) {
         self.response = response
@@ -50,10 +54,16 @@ final class FakeGeocoder: PlaceGeocoding {
 
     func components(for location: CLLocation) async throws -> PlaceComponents? {
         requestCount += 1
+        requestedLocations.append(location.coordinate)
+        if let hook = onRequest {
+            onRequest = nil
+            try await hook()
+        }
         switch response {
         case .success(let components): return components
         case .noResult: return nil
         case .failure: throw URLError(.notConnectedToInternet)
+        case .cancelled: throw CancellationError()
         }
     }
 }
@@ -144,7 +154,7 @@ struct PlaceResolutionTests {
         let stack = try capturedStack(in: t)
         await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: FakeGeocoder(.noResult))
         #expect(stack.placeLookupAttempts == 1)
-        #expect(stack.placeDisplay == .resolving)
+        #expect(stack.placeDisplay == .retryPending)
     }
 
     @Test func manualRetryResetsAttemptsAndUsesStoredCoordinate() async throws {
@@ -229,6 +239,144 @@ struct PlaceResolutionTests {
 
         #expect(geocoder.requestCount == 0)
         #expect(stack.placeDisplay == .unavailable("위치 삭제됨"))
+    }
+}
+
+/// 3차 안정화: 실행 트리거, 겹치는 요청, 재시도 상태
+@MainActor
+struct PlaceResolutionTriggerTests {
+    private func capturedStack(in t: TestStore, latitude: Double, longitude: Double = 127.0557) throws -> Stack {
+        let stack = try t.store.createStack(source: .appIntent, at: Date(timeIntervalSince1970: 1_800_000_000 + latitude))
+        LocationEnricher.record(
+            .attempted(.located(CLLocation(
+                coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                altitude: 0, horizontalAccuracy: 15, verticalAccuracy: -1, timestamp: .now
+            ))),
+            on: stack
+        )
+        try t.context.save()
+        return stack
+    }
+
+    private func targetIDs(_ t: TestStore) throws -> [UUID] {
+        try t.context.fetch(FetchDescriptor<Stack>(predicate: Stack.needsPlaceResolution, sortBy: [SortDescriptor(\.createdAt)])).map(\.id)
+    }
+
+    @Test func triggerKeyChangesWhenTargetsSwapWithSameCount() throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+        let before = try targetIDs(t)
+
+        try t.store.discard(a)
+        a.clearLocation()
+        try t.context.save()
+        _ = try capturedStack(in: t, latitude: 37.51)
+        let after = try targetIDs(t)
+
+        #expect(before.count == after.count)
+        #expect(before != after)
+    }
+
+    @Test func stackCreatedDuringRunIsResolvedInSameRun() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+        var b: Stack?
+        let geocoder = FakeGeocoder(.success(Sample.seongsuMapKit))
+        geocoder.onRequest = {
+            b = try self.capturedStack(in: t, latitude: 37.60)
+            // 변환 중에 들어온 요청은 버려지지 않고 이어서 처리돼야 한다
+            await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        }
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+
+        #expect(a.placeLabel != nil)
+        #expect(try #require(b).placeLabel != nil)
+        #expect(geocoder.requestCount == 2)
+    }
+
+    @Test func overlappingRequestsDoNotDuplicateGeocoding() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+        let geocoder = FakeGeocoder(.success(Sample.seongsuMapKit))
+        geocoder.onRequest = {
+            await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+            await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        }
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+
+        #expect(a.placeLabel != nil)
+        #expect(geocoder.requestCount == 1)
+    }
+
+    @Test func failedStackIsNotCountedTwiceWithinOneRun() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+        let geocoder = FakeGeocoder(.failure)
+        geocoder.onRequest = {
+            _ = try self.capturedStack(in: t, latitude: 37.60)
+            await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        }
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+
+        #expect(a.placeLookupAttempts == 1)
+    }
+
+    @Test func networkFailureThenRecovery() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.5446)
+        let geocoder = FakeGeocoder(.failure)
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        #expect(a.placeDisplay == .retryPending)
+        #expect(a.latitude == 37.5446)
+
+        geocoder.response = .success(Sample.seongsuMapKit)
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        #expect(a.placeDisplay == .place("서울특별시 성동구 성수동2가"))
+    }
+
+    @Test func statesProgressFromResolvingToRetryToFinalFailure() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+        let geocoder = FakeGeocoder(.failure)
+        #expect(a.placeDisplay == .resolving)
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        #expect(a.placeDisplay == .retryPending)
+        #expect(!a.placeDisplay.canRetry)
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: geocoder)
+        #expect(a.placeDisplay == .unresolved)
+        #expect(a.placeDisplay.canRetry)
+    }
+
+    @Test func manualRetryUsesStoredCoordinate() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.4968, longitude: 126.8802)
+        a.placeLookupAttempts = PlaceLabelFormatter.maxLookupAttempts
+        try t.context.save()
+        let geocoder = FakeGeocoder(.success(Sample.guroMapKit))
+
+        await LocationEnricher.retryPlaceLookup(for: a, in: t.context, geocoder: geocoder)
+
+        #expect(a.placeLabel == "서울특별시 구로구 구로동")
+        let requested = try #require(geocoder.requestedLocations.first)
+        #expect(requested.latitude == 37.4968)
+        #expect(requested.longitude == 126.8802)
+    }
+
+    @Test func cancellationIsNotCountedAsFailure() async throws {
+        let t = try TestStore()
+        let a = try capturedStack(in: t, latitude: 37.50)
+
+        await LocationEnricher.resolvePlaceLabels(in: t.context, geocoder: FakeGeocoder(.cancelled))
+
+        #expect(a.placeLookupAttempts == 0)
+        #expect(a.placeDisplay == .resolving)
     }
 }
 
