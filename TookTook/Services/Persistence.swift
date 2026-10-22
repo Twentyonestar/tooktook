@@ -27,7 +27,7 @@ enum Persistence {
         defaults: UserDefaults = .standard
     ) throws -> ModelContainer {
         if defaults.string(forKey: schemaVersionKey) != currentSchemaVersion {
-            try? copyStoreFiles(at: storeURL, into: backupsDirectory, label: "before-\(currentSchemaVersion)")
+            _ = try? copyStoreFiles(at: storeURL, into: backupsDirectory, label: "before-\(currentSchemaVersion)")
         }
 
         let schema = Schema(versionedSchema: SchemaV1.self)
