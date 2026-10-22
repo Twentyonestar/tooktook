@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @Bindable private var router = AppRouter.shared
+    @AppStorage(PrefKey.hasCompletedOnboarding) private var hasCompletedOnboarding = false
 
     @Query(filter: #Predicate<Stack> { $0.statusRaw == "pending" })
     private var pendingStacks: [Stack]
@@ -28,11 +29,16 @@ struct RootView: View {
                 .tabItem { Label("설정", systemImage: "gearshape") }
                 .tag(AppTab.settings)
         }
-        .task {
-            StackStore(context: context).seedDefaultCategoriesIfNeeded()
-            if Preferences.reminderEnabled {
-                await ReminderScheduler.requestAuthorizationIfNeeded()
+        .fullScreenCover(isPresented: Binding(get: { !hasCompletedOnboarding }, set: { _ in })) {
+            OnboardingView {
+                hasCompletedOnboarding = true
+                Task { await ReminderScheduler.refresh(pendingCount: pendingStacks.count) }
             }
+            .interactiveDismissDisabled()
+        }
+        .task {
+            // 권한 요청은 온보딩에서만 한다.
+            StackStore(context: context).seedDefaultCategoriesIfNeeded()
             await ReminderScheduler.refresh(pendingCount: pendingStacks.count)
         }
         .onChange(of: pendingStacks.count) { _, count in

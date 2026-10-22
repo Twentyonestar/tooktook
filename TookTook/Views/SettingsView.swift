@@ -1,3 +1,4 @@
+import AppIntents
 import CoreLocation
 import SwiftData
 import SwiftUI
@@ -168,7 +169,9 @@ struct SettingsView: View {
             let url = try result.get()
             let accessing = url.startAccessingSecurityScopedResource()
             defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-            pendingImport = try BackupService.decode(Data(contentsOf: url))
+            let payload = try BackupService.decode(Data(contentsOf: url))
+            try BackupService.validate(payload)
+            pendingImport = payload
         } catch {
             errorMessage = "백업 파일을 읽을 수 없어요. \(error.localizedDescription)"
         }
@@ -206,14 +209,12 @@ struct SettingsView: View {
 
 struct BackTapGuideView: View {
     var body: some View {
-        GuideList(steps: [
-            "단축어 앱을 열고 오른쪽 위 + 를 눌러 새 단축어를 만들어요.",
-            "동작 검색에서 '툭툭'을 찾아 '지출 스택 남기기'를 추가해요.",
-            "단축어 이름을 '스택 남기기'로 바꾸고 완료를 눌러요.",
-            "설정 앱 > 손쉬운 사용 > 터치 > 뒷면 탭 > 이중 탭으로 이동해요.",
-            "맨 아래 단축어 목록에서 '스택 남기기'를 골라요.",
-            "이제 결제 후 iPhone 뒷면을 두 번 톡톡 두드리면 스택이 저장돼요.",
-        ], footnote: "뒷면 탭 목록에는 단축어 앱에 직접 만든 단축어만 보여요. 검색에 '툭툭'이 나오지 않으면 툭툭을 한 번 실행한 뒤 다시 찾아 주세요.")
+        GuideList(steps: BackTapGuide.steps, footnote: BackTapGuide.footnote) {
+            ShortcutsLink()
+                .shortcutsLinkStyle(.automaticOutline)
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+        }
         .navigationTitle("뒷면 탭 설정")
     }
 }
@@ -230,12 +231,22 @@ struct LockScreenGuideView: View {
     }
 }
 
-private struct GuideList: View {
+private struct GuideList<Accessory: View>: View {
     let steps: [String]
     let footnote: String
+    @ViewBuilder let accessory: Accessory
+
+    init(steps: [String], footnote: String, @ViewBuilder accessory: () -> Accessory = { EmptyView() }) {
+        self.steps = steps
+        self.footnote = footnote
+        self.accessory = accessory()
+    }
 
     var body: some View {
         List {
+            Section {
+                accessory
+            }
             Section {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     HStack(alignment: .top, spacing: 12) {

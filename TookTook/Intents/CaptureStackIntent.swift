@@ -14,8 +14,10 @@ struct CaptureStackIntent: AppIntent {
         // 저장에 실패하면 여기서 오류가 던져져 단축어에 실패로 표시된다.
         let stack = try store.createStack(source: .appIntent)
 
-        await LocationEnricher.attachLocation(to: stack, in: context)
+        // 아래 두 작업은 실패해도 오류를 던지지 않는다. 스택 저장 성공 여부와 분리.
+        // 알림 갱신을 먼저 해서, 위치 조회 중 실행이 끊겨도 알림은 최신 상태로 남게 한다.
         await ReminderScheduler.refresh(pendingCount: store.pendingCount())
+        await LocationEnricher.attachLocation(to: stack, in: context)
 
         let time = stack.createdAt.formatted(date: .omitted, time: .shortened)
         return .result(dialog: "\(time) 스택을 남겼어요")

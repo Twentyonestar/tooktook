@@ -293,7 +293,7 @@ struct NotificationDeniedBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("알림이 꺼져 있어요", systemImage: "bell.slash")
                 .font(.headline)
-            Text("오후 정리 알림을 받으려면 설정에서 툭툭의 알림을 허용해 주세요. 알림 없이도 언제든 여기서 정리할 수 있어요.")
+            Text("오후 정리 알림을 받으려면 설정에서 툭툭가계부의 알림을 허용해 주세요. 알림 없이도 언제든 여기서 정리할 수 있어요.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("알림 설정 열기") {

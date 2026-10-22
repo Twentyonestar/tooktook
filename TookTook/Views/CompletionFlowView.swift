@@ -86,9 +86,9 @@ struct StackCompletionForm: View {
                     Text(stack.placeLabel ?? stack.locationStatus.label)
                         .foregroundStyle(.secondary)
                     if stack.isPossibleDuplicate {
-                        Text("바로 앞 스택과 거의 같은 시각에 남겨졌어요. 중복이면 건너뛰고 나중에 삭제하세요.")
+                        Text("바로 앞 스택과 3초 안에 남겨졌어요. 연달아 결제했다면 그대로 정리하면 돼요.")
                             .font(.footnote)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .accessibilityElement(children: .combine)

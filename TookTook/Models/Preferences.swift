@@ -7,6 +7,7 @@ enum PrefKey {
     static let reminderMinutes = "reminderMinutes"
     static let locationCaptureEnabled = "locationCaptureEnabled"
     static let appearance = "appearance"
+    static let hasCompletedOnboarding = "hasCompletedOnboarding"
 }
 
 enum Preferences {
