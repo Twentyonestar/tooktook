@@ -1,57 +1,62 @@
-# SwiftData 마이그레이션 계획
+# SwiftData 스키마 버전 관리와 마이그레이션
 
-상태: 계획만 작성. 이번 작업에서는 스키마를 바꾸지 않았다.
+상태: SchemaV1 + 마이그레이션 계획 도입 완료 (커밋 9261502). CloudKit은 꺼져 있음.
 
-## 1. 현재 모델 구조
+## 1. 현재 구조
 
-`Persistence.container`가 `Schema([Stack, LedgerTransaction, ExpenseCategory])`로 기본 위치(`Application Support/default.store`)에 저장소 하나를 연다. `VersionedSchema`나 `SchemaMigrationPlan`은 없다.
+### 저장소
+- 위치: `Library/Application Support/default.store` (+ `-wal`, `-shm`). 버전 관리 도입 전과 같은 파일을 그대로 연다.
+- 여는 곳: `Persistence.openContainer` 한 곳. 앱과 App Intent 모두 `StoreController.shared`를 통해 같은 컨테이너를 쓴다. App Intent는 앱 프로세스에서 실행되며 별도 확장(Extension)이나 App Group 저장소는 없다.
+- 옵션: `ModelConfiguration(schema:url:cloudKitDatabase: .none)`. CloudKit은 명시적으로 끈다(아래 4절).
 
+### 모델 (`SchemaV1`, 1.0.0)
 | 모델 | 속성 | 비고 |
 |---|---|---|
-| Stack | `id`(unique), `createdAt`, `captureSourceRaw`, `statusRaw`, `latitude?`, `longitude?`, `horizontalAccuracy?`, `locationStatusRaw`, `placeLabel?`, `completedAt?`, `transactionId?`, `discardedAt?`, `isPossibleDuplicate`, `placeLookupAttempts = 0`, `placeLabelVersion = 0` | enum은 raw String으로 저장 |
+| Stack | `id`(unique), `createdAt`, `captureSourceRaw`, `statusRaw`, `latitude?`, `longitude?`, `horizontalAccuracy?`, `locationStatusRaw`, `placeLabel?`, `completedAt?`, `transactionId?`, `discardedAt?`, `isPossibleDuplicate`, `placeLookupAttempts = 0`, `placeLabelVersion = 0` | enum은 raw String |
 | LedgerTransaction | `id`(unique), `sourceStackId?`, `amountKRW`(Int64), `categoryId`, `occurredAt`, `memo?`, `createdAt`, `updatedAt` | |
-| ExpenseCategory | `id`(unique), `name`, `symbol`, `displayOrder`, `isArchived` | 삭제하지 않고 보관 |
+| ExpenseCategory | `id`(unique), `name`, `symbol`, `displayOrder`, `isArchived` | 삭제 대신 보관 |
 
-모델 사이에 SwiftData `@Relationship`은 없다. 스택↔지출↔카테고리는 UUID로만 연결되어 있어서, 관계 삭제 규칙이나 역참조로 생기는 마이그레이션 위험은 없다. 대신 무결성은 앱 코드(StackStore, BackupService.validate)가 지킨다.
+- SwiftData `@Relationship` 없음. 스택↔지출↔카테고리는 UUID 필드로만 연결되고, 무결성은 `StackStore`와 `BackupService.validate`가 지킨다.
+- 앱 코드는 `typealias Stack = SchemaV1.Stack`처럼 별칭으로 현재 버전 모델을 쓴다.
 
-## 2. 지금까지의 변경 이력
+### UserDefaults (SwiftData 밖)
+`reminderEnabled`, `reminderMinutes`, `locationCaptureEnabled`, `appearance`, `hasCompletedOnboarding`, `storeSchemaVersion`(마지막으로 연 스키마 버전).
 
-- e622360: Stack에 `placeLookupAttempts`, `placeLabelVersion`을 기본값과 함께 추가했다. SwiftData 자동 경량 마이그레이션으로 처리됐고, 실기기의 기존 스택·지출이 보존되는 것을 기기 DB로 확인했다.
+### JSON 백업
+`BackupPayload.version = 1`. 이후 추가된 필드(`placeLookupAttempts`, `placeLabelVersion`)는 옵셔널이라 이전 파일도 읽는다(테스트 있음). 가져오기는 전체 교체.
 
-## 3. 스키마 변경 시 위험
+## 2. 도입 과정에서 지킨 것
+1. **픽스처 먼저**: 버전 관리 이전 모델(커밋 648696e)로 합성 데이터 저장소를 만들어 `TookTookTests/Fixtures/StoreV0`에 커밋(b0e213e)한 뒤에 코드를 바꿨다.
+2. **같은 스키마**: 필드·기본값·unique를 하나도 바꾸지 않고 클래스만 `SchemaV1` 안으로 옮겼다. 그래서 기존 저장소는 마이그레이션 없이 열린다.
+3. **검증**
+   - 픽스처 사본을 새 코드로 열어 모든 레코드·필드·UUID 연결 확인, 원본 픽스처 해시 불변 확인
+   - 실기기 저장소 **사본**(스택 17·지출 6·카테고리 8, a668d7a가 기록)을 새 코드로 열어 확인. 개인 데이터라 커밋하지 않고 `TOOKTOOK_EXTERNAL_STORE_DIR`로만 실행
+   - 다시 열기(앱 재실행)와 쓰기 후 유지 확인
+4. **열기 전 사본**: `storeSchemaVersion`이 현재 버전과 다르면(버전 관리 이전 설치본의 첫 실행 포함) 열기 전에 저장소 파일을 `Application Support/StoreBackups/before-<버전>-<시각>/`에 복사한다. 원본은 옮기지 않는다. 같은 종류 사본은 최근 3개만 남긴다.
 
-| 변경 | 자동 마이그레이션 | 위험 |
+## 3. 열기 실패 처리
+- `fatalError` 제거. 실패하면 `StoreController.state = .failed`가 되고 앱은 "기록을 불러오지 못했어요" 화면을 보여준다(다시 시도하기, 복구 방법 확인하기). 원본을 지우는 버튼은 없다.
+- 실패 시 빈 저장소를 만들지 않는다. 실패한 파일은 `StoreBackups/failed-open-<시각>/`에 사본을 남긴다.
+- 다시 시도는 같은 파일을 다시 연다. 시뮬레이터에서 손상 파일 → 복구 화면 → 파일 복원 후 다시 시도 → 정상 화면을 확인했다.
+- App Intent는 저장소가 없으면 `StoreUnavailableError`를 던져 단축어에 실패로 표시한다(성공 문구를 보여주지 않음).
+- Core Data는 손상 파일에 대해 "Attempting recovery"를 로그로 남기지만, 테스트에서 파일 내용이 바뀌지 않음을 확인했다.
+
+## 4. 변경 시 위험
+| 변경 | 자동 마이그레이션 | 대응 |
 |---|---|---|
-| 기본값 있는 속성 추가 | 됨 | 낮음 |
-| 옵셔널 속성 추가 | 됨 | 낮음 |
-| 속성 이름 변경 | 안 됨 | `@Attribute(originalName:)` 없이 바꾸면 기존 값이 사라진다 |
-| 타입 변경 (예: Int64 → Decimal) | 안 됨 | 저장소 열기 실패 → 현재 코드는 `fatalError`로 앱이 시작되지 않는다 |
-| 옵셔널 → 필수 | 안 됨 | 기존 nil 값 때문에 실패 |
-| unique 제약 추가 | 위험 | 기존 중복 데이터가 있으면 실패 |
-| 모델 이름 변경·삭제 | 안 됨 | 데이터 손실 |
-| raw String 값 변경 (예: `pending` → `open`) | 스키마는 그대로 | 기존 행이 기본값으로 해석돼 상태가 틀어진다. 커스텀 마이그레이션 필요 |
-| App Group 저장소로 이동 (잠금화면 컨트롤용) | 해당 없음 | 파일을 옮기는 1회 작업이 필요하다. 실패하면 빈 저장소로 시작할 수 있다 |
-| CloudKit 동기화 도입 | 해당 없음 | unique 제약 불가, 모든 속성이 옵셔널이거나 기본값 필요 |
+| 기본값 있는 속성 추가 / 옵셔널 추가 | 경량 | SchemaV2 + `.lightweight` |
+| unique 제거, 필수 속성에 기본값 추가 | 경량 (테스트로 확인, 5절) | 같음 |
+| 속성 이름 변경 | 안 됨 | `@Attribute(originalName:)` |
+| 타입 변경, 옵셔널 → 필수 | 안 됨 | `.custom` 단계에서 값 변환 |
+| raw String 값 변경 | 스키마는 같음 | `.custom` 단계에서 값 갱신 |
+| 모델 이름 변경·삭제 | 안 됨 | 새 모델 + 복사 단계 |
+| `cloudKitDatabase` 기본값(.automatic) 방치 | – | iCloud 권한이 생기는 순간 검증 안 된 모델로 동기화 시작. `.none` 명시로 차단함 |
 
-가장 큰 위험은 저장소를 열지 못했을 때 `Persistence.container`가 `fatalError`로 끝나는 것이다. 업데이트 한 번으로 앱이 실행되지 않게 될 수 있다.
+## 5. 다음 버전 추가 절차
+1. `SchemaV2: VersionedSchema`를 만들고 모델을 복사해 바꾼다. `typealias`를 V2로 옮긴다.
+2. `TookTookMigrationPlan.schemas`에 V2를 붙이고 `stages`에 단계를 추가한다.
+3. `Persistence.openContainer`의 `Schema(versionedSchema:)`와 `currentSchemaVersion`을 V2로 바꾼다. 버전 표식이 달라지므로 첫 실행 때 자동으로 열기 전 사본이 생긴다.
+4. 그 시점의 V1 저장소를 새 픽스처(StoreV1)로 남기고, V0·V1 픽스처 둘 다 V2로 여는 테스트를 추가한다.
+5. 실기기 저장소 사본으로 `TOOKTOOK_EXTERNAL_STORE_DIR` 테스트를 실행한 뒤에만 기기에 설치한다.
 
-## 4. VersionedSchema / SchemaMigrationPlan 도입 계획
-
-App Store 첫 출시 **전에** 도입한다. 출시 후에는 V1이 실제로 배포된 스키마와 정확히 같아야 하므로, 늦을수록 맞추기 어렵다.
-
-1. `SchemaV1: VersionedSchema`를 만들고 현재 세 모델을 그 안으로 옮긴다. 속성·기본값·unique는 지금과 완전히 같게 한다. 앱 코드는 `typealias Stack = SchemaV1.Stack`처럼 별칭으로 그대로 쓴다.
-2. `TookTookMigrationPlan: SchemaMigrationPlan`에 `schemas = [SchemaV1.self]`, `stages = []`로 시작한다.
-3. `ModelContainer(for:migrationPlan:configurations:)`로 연다.
-4. 다음 스키마 변경부터 `SchemaV2`를 추가하고, 경량이면 `.lightweight(fromVersion:toVersion:)`, 값 변환이 필요하면 `.custom(... willMigrate:didMigrate:)`를 단계로 둔다.
-5. 각 버전마다 이전 버전 저장소 파일(테스트 리소스)을 열어 마이그레이션하는 단위 테스트를 둔다.
-
-## 5. 기존 설치 데이터 호환
-
-- V1은 현재 설치본의 스키마와 같아야 한다. 도입 직후 실기기에 덮어 설치해 기존 스택·지출이 그대로인지 기기 DB로 확인한다.
-- 저장소 열기 실패 시 `fatalError` 대신: 기존 파일을 `default.store.broken-<날짜>`로 옮겨 보존하고, 사용자에게 알린 뒤 JSON 백업 가져오기를 안내한다. 데이터를 조용히 지우지 않는다.
-- 마이그레이션이 들어가는 업데이트 전에는 앱에서 JSON 백업 내보내기를 권하는 안내를 띄운다.
-- JSON 백업은 스키마와 별개로 `BackupPayload.version`을 유지한다. 새 필드는 옵셔널로 추가해 이전 백업 파일도 계속 읽는다(현재 방식).
-
-## 6. 이번 작업에서 바꾸지 않은 이유
-
-현재 출시 전이고 설치된 기기가 하나뿐이며, 계획한 다음 변경(잠금화면 컨트롤용 App Group 이동)은 유료 개발자 계정이 필요해 시점이 정해지지 않았다. 지금 스키마를 옮기면 위험만 생기고 얻는 것이 없어서, 출시 준비 단계에서 1번부터 진행하는 것을 권한다.
+CloudKit용 V2 후보(unique 제거 + 기본값)는 `TookTookTests/CloudKitCompatibilityTests.swift`의 `SchemaV2Candidate`로 이미 경량 마이그레이션이 무손실임을 확인했다. 실제 도입은 `docs/ICLOUD_MIGRATION_PLAN.md`를 따른다.
