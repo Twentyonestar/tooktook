@@ -141,6 +141,7 @@ struct InboxView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .fontWeight(.semibold)
             .disabled(pendingStacks.isEmpty)
         }
         .padding(.vertical, 4)

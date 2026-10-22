@@ -131,6 +131,7 @@ struct StackCompletionForm: View {
                 .disabled(parseAmount(amountText) <= 0 || categoryId == nil)
             }
             .controlSize(.large)
+            .fontWeight(.semibold)
             .padding()
             .background(.bar)
         }
@@ -265,6 +266,7 @@ struct CompletionSummaryView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            .fontWeight(.semibold)
         }
         .padding()
     }
