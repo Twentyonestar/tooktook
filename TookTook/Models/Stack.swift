@@ -26,66 +26,71 @@ enum LocationStatus: String, Codable {
     case removed
 }
 
-/// 결제 순간에 남기는 지출 흔적. 결제 증명이 아니라 사용자가 수동으로 남긴 기록이다 (BR-01).
-@Model
-final class Stack {
-    @Attribute(.unique) var id: UUID
-    var createdAt: Date
-    var captureSourceRaw: String
-    var statusRaw: String
-    var latitude: Double?
-    var longitude: Double?
-    var horizontalAccuracy: Double?
-    var locationStatusRaw: String
-    var placeLabel: String?
-    var completedAt: Date?
-    var transactionId: UUID?
-    var discardedAt: Date?
-    /// 직전 스택과 너무 가깝게 생성된 경우 표시만 한다. 자동으로 지우지 않는다 (BR-10).
-    var isPossibleDuplicate: Bool
-    /// 주소 변환 실패 횟수. PlaceLabelFormatter.maxLookupAttempts에 닿으면 자동 재시도를 멈춘다.
-    var placeLookupAttempts: Int = 0
-    /// placeLabel을 만든 PlaceLabelFormatter.version. 낮으면 새 형식으로 다시 변환한다.
-    var placeLabelVersion: Int = 0
+/// 앱 코드는 별칭으로 현재 스키마 버전의 모델을 쓴다. 새 버전을 추가하면 별칭을 옮긴다.
+typealias Stack = SchemaV1.Stack
 
-    init(
-        id: UUID = UUID(),
-        createdAt: Date = .now,
-        captureSource: CaptureSource,
-        status: StackStatus = .pending,
-        locationStatus: LocationStatus = .notRequested,
-        isPossibleDuplicate: Bool = false
-    ) {
-        self.id = id
-        self.createdAt = createdAt
-        self.captureSourceRaw = captureSource.rawValue
-        self.statusRaw = status.rawValue
-        self.locationStatusRaw = locationStatus.rawValue
-        self.isPossibleDuplicate = isPossibleDuplicate
-    }
+extension SchemaV1 {
+    /// 결제 순간에 남기는 지출 흔적. 결제 증명이 아니라 사용자가 수동으로 남긴 기록이다 (BR-01).
+    @Model
+    final class Stack {
+        @Attribute(.unique) var id: UUID
+        var createdAt: Date
+        var captureSourceRaw: String
+        var statusRaw: String
+        var latitude: Double?
+        var longitude: Double?
+        var horizontalAccuracy: Double?
+        var locationStatusRaw: String
+        var placeLabel: String?
+        var completedAt: Date?
+        var transactionId: UUID?
+        var discardedAt: Date?
+        /// 직전 스택과 너무 가깝게 생성된 경우 표시만 한다. 자동으로 지우지 않는다 (BR-10).
+        var isPossibleDuplicate: Bool
+        /// 주소 변환 실패 횟수. PlaceLabelFormatter.maxLookupAttempts에 닿으면 자동 재시도를 멈춘다.
+        var placeLookupAttempts: Int = 0
+        /// placeLabel을 만든 PlaceLabelFormatter.version. 낮으면 새 형식으로 다시 변환한다.
+        var placeLabelVersion: Int = 0
 
-    var status: StackStatus {
-        get { StackStatus(rawValue: statusRaw) ?? .pending }
-        set { statusRaw = newValue.rawValue }
-    }
+        init(
+            id: UUID = UUID(),
+            createdAt: Date = .now,
+            captureSource: CaptureSource,
+            status: StackStatus = .pending,
+            locationStatus: LocationStatus = .notRequested,
+            isPossibleDuplicate: Bool = false
+        ) {
+            self.id = id
+            self.createdAt = createdAt
+            self.captureSourceRaw = captureSource.rawValue
+            self.statusRaw = status.rawValue
+            self.locationStatusRaw = locationStatus.rawValue
+            self.isPossibleDuplicate = isPossibleDuplicate
+        }
 
-    var captureSource: CaptureSource {
-        get { CaptureSource(rawValue: captureSourceRaw) ?? .appIntent }
-        set { captureSourceRaw = newValue.rawValue }
-    }
+        var status: StackStatus {
+            get { StackStatus(rawValue: statusRaw) ?? .pending }
+            set { statusRaw = newValue.rawValue }
+        }
 
-    var locationStatus: LocationStatus {
-        get { LocationStatus(rawValue: locationStatusRaw) ?? .notRequested }
-        set { locationStatusRaw = newValue.rawValue }
-    }
+        var captureSource: CaptureSource {
+            get { CaptureSource(rawValue: captureSourceRaw) ?? .appIntent }
+            set { captureSourceRaw = newValue.rawValue }
+        }
 
-    var hasCoordinate: Bool { latitude != nil && longitude != nil }
+        var locationStatus: LocationStatus {
+            get { LocationStatus(rawValue: locationStatusRaw) ?? .notRequested }
+            set { locationStatusRaw = newValue.rawValue }
+        }
 
-    func clearLocation() {
-        latitude = nil
-        longitude = nil
-        horizontalAccuracy = nil
-        placeLabel = nil
-        locationStatus = .removed
+        var hasCoordinate: Bool { latitude != nil && longitude != nil }
+
+        func clearLocation() {
+            latitude = nil
+            longitude = nil
+            horizontalAccuracy = nil
+            placeLabel = nil
+            locationStatus = .removed
+        }
     }
 }

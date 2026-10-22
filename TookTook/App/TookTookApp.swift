@@ -6,13 +6,24 @@ import UserNotifications
 struct TookTookApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage(PrefKey.appearance) private var appearance = Appearance.system.rawValue
+    @State private var store = StoreController.shared
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .preferredColorScheme(Appearance(rawValue: appearance)?.colorScheme)
+            Group {
+                switch store.state {
+                case .ready(let container):
+                    RootView()
+                        .modelContainer(container)
+                case .failed(let detail):
+                    // 저장소를 열지 못하면 빈 저장소로 대신하지 않고 복구 안내만 보여준다.
+                    StoreRecoveryView(detail: detail, preservedCopy: store.preservedCopy) {
+                        store.retry()
+                    }
+                }
+            }
+            .preferredColorScheme(Appearance(rawValue: appearance)?.colorScheme)
         }
-        .modelContainer(Persistence.container)
     }
 }
 
