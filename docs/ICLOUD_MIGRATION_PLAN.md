@@ -52,6 +52,15 @@ CloudKit 호환 모델만 먼저 배포해서, 동기화와 스키마 변경 위
 |---|---|
 | SchemaV1 + 마이그레이션 계획, 열기 전 사본, 열기 실패 처리 | 완료 (9261502) |
 | CloudKit 호환성 점검 | 완료 (a65d62d), V2 위반 0건 (20f054f) |
-| 1. SchemaV2 (CloudKit 호환 모델, 기본 카테고리 고정 ID·병합, ID 중복 정책) | 코드·테스트 완료 (20f054f). 실기기 설치 검증은 아래 기록 |
+| 1. SchemaV2 (CloudKit 호환 모델, 기본 카테고리 고정 ID·병합, ID 중복 정책) | 완료 (20f054f), 실기기 마이그레이션 검증 완료 (아래) |
 | 2~4. CloudKit 연결·전환·배포 | 미착수 (유료 계정 필요) |
 | 실기기 동기화 검증 | 미검증 |
+
+## SchemaV2 실기기 마이그레이션 기록 (2026-10-23, iPhone 15 Pro)
+- 설치 전: SchemaV1 형식(`defaultKey` 컬럼 없음), 스택 17·지출 6·카테고리 8
+- 설치·실행 후: 스택·지출·카테고리 31행의 ID, 상태, 수집 경로, 위치 상태, 장소명, 좌표, 생성·완료·결제 시각, 금액, 메모, 카테고리 참조, 이름·아이콘·순서·보관 여부가 설치 전과 **완전히 같음**
+- 기본 카테고리 8개: 원래 UUID 그대로, `defaultKey` food·cafe·transport·shopping·living·culture·medical·other 표시
+- 모델 테이블의 unique 인덱스 없음 (남은 unique 인덱스는 Core Data 내부 기록 테이블 `ATRANSACTIONSTRING` 뿐)
+- 열기 전 사본 `StoreBackups/before-2.0.0-*` 생성, 내용이 설치 전 데이터와 같고 V1 형식 그대로
+- 새 충돌 로그 없음
+
