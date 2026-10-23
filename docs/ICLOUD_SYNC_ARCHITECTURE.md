@@ -1,6 +1,6 @@
 # iCloud 동기화 아키텍처 (설계)
 
-상태: 설계 문서. CloudKit은 아직 켜지 않았다(`cloudKitDatabase: .none`). 유료 Apple Developer Program 가입과 iCloud Capability 설정 이후 `docs/ICLOUD_MIGRATION_PLAN.md` 순서대로 진행한다.
+상태: 설계 문서. **SchemaV2(CloudKit 호환 모델) 적용 완료(20f054f)**, CloudKit은 아직 켜지 않았다(`cloudKitDatabase: .none`). 유료 Apple Developer Program 가입과 iCloud Capability 설정 이후 `docs/ICLOUD_MIGRATION_PLAN.md` 순서대로 진행한다.
 
 표기: **[확인]** 이 저장소에서 테스트나 SDK로 확인한 사실 / **[가정]** Apple 문서·일반 지식에 기댄 것으로 실기기 검증이 필요한 것.
 
@@ -27,22 +27,22 @@
 ## 3. 모델 요구사항과 현재 상태
 CloudKit 동기화 모델은 unique 제약을 쓸 수 없고, 모든 속성이 옵셔널이거나 기본값이 있어야 하며, 관계는 옵셔널이고 역관계가 있어야 한다.
 
-현재 `SchemaV1`의 위반 20건 **[확인: `CloudKitAudit` 테스트]**:
+SchemaV1의 위반 20건 **[확인: `CloudKitAudit` 테스트]** → **SchemaV2에서 0건 [확인]**:
 - unique: `Stack.id`, `LedgerTransaction.id`, `ExpenseCategory.id`
 - 기본값 없는 필수 속성: Stack 6개(`id, createdAt, captureSourceRaw, statusRaw, locationStatusRaw, isPossibleDuplicate`), LedgerTransaction 6개(`id, amountKRW, categoryId, occurredAt, createdAt, updatedAt`), ExpenseCategory 5개(`id, name, symbol, displayOrder, isArchived`)
 - 관계: 없음 (UUID 필드로만 연결하므로 관계 규칙·삭제 규칙 위반 없음)
 
-**모델 수정이 필요하다.** 해결 방향(SchemaV2): unique 제거 + 각 필수 속성에 기본값. 이름·타입·의미는 그대로. 테스트 전용 후보로 V1 → V2 경량 마이그레이션이 레코드·값·UUID 연결을 모두 유지함을 확인했다 **[확인: `CandidateMigrationTests`]**. 영향받는 데이터: 세 모델 전부의 스키마 메타데이터. 저장된 값은 바뀌지 않는다.
+SchemaV2(20f054f): unique 제거 + 각 필수 속성에 기본값 + `ExpenseCategory.defaultKey`. 이름·타입·의미는 그대로. StoreV0·StoreV1 픽스처와 실기기 저장소 사본에서 레코드·값·UUID 연결이 모두 유지됨을 확인했다 **[확인]**. 저장된 값은 바뀌지 않는다.
 
 ### unique 제거의 결과
-SwiftData가 더 이상 `id` 중복을 막지 않는다. 지금 코드에서 같은 `id`를 다시 넣는 경로는 백업 가져오기뿐이며, 가져오기는 기존 레코드를 모두 지운 뒤 넣으므로 한 기기 안에서는 중복이 생기지 않는다. 기기 사이 중복은 4절에서 다룬다.
+SwiftData가 더 이상 `id` 중복을 막지 않는다. 앱 정책(`docs/SWIFTDATA_MIGRATION.md` 7절): 생성 시 `UniqueID`로 재추첨, 앱 시작 시 `DuplicateIDResolver`가 값이 같은 사본만 정리하고 값이 다른 레코드는 보존. 이 확인은 unique 제약 같은 원자성이 없으므로, 동기화로 들어오는 중복은 사후 정리로 다룬다.
 
 ## 4. D-2. 기존 데이터와 여러 기기
 | 위험 | 원인 | 대응 |
 |---|---|---|
 | 기존 데이터가 빈 DB로 교체 | 저장소 URL을 바꾸거나 새 컨테이너를 만들 때 | **같은 `default.store`를 그대로 연다.** 열기 실패 시 빈 저장소를 만들지 않는 현재 정책 유지(StoreController) |
 | 로컬 + 클라우드 중복 | 한 사용자가 기기 두 대에서 각자 쓰다가 둘 다 동기화를 켬 | 스택·지출은 UUID가 서로 다르므로 실제로 다른 기록이다(중복 아님). 문제는 기본 카테고리(아래) |
-| **기본 카테고리 중복** | 각 기기가 첫 실행 때 `UUID()`로 기본 8개를 만든다. 두 기기를 합치면 "식비"가 2개 | V2에서 기본 카테고리에 **고정 UUID**를 쓰고, 기존 설치본은 동기화 시작 전 "이름이 같은 기본 카테고리"를 하나로 합치는 정리 단계(지출의 `categoryId`를 대표 ID로 바꿈)를 둔다 |
+| **기본 카테고리 중복** | V1까지는 기기마다 `UUID()`로 기본 8개를 만들었다 | **V2 적용**: 새 설치는 고정 UUID로 시드(기기 간 같은 레코드), 기존 설치는 UUID를 유지한 채 `defaultKey` 표시. 동기화 후 같은 `defaultKey`가 여럿이면 `DefaultCategoryMerger`가 거래를 대표로 옮기고 나머지는 보관(삭제 없음). 이름이 같아도 `defaultKey`가 없는 사용자 카테고리는 합치지 않는다 |
 | 같은 UUID 충돌 | unique 제거 후 같은 `id`가 두 레코드로 존재 | 정상 경로에서는 생기지 않음. 생기면 앱이 `id` 기준 중복 정리(더 최근 `updatedAt` 유지)를 실행. 정리 함수는 테스트로 고정 |
 | 여러 기기에서 동시에 만든 스택 | 기기마다 다른 UUID | 서로 다른 스택으로 모두 남는다. 앱의 "3초 중복 의심" 표시는 같은 기기 안의 연속 탭 판단용이며 CloudKit 레코드 중복과는 다른 개념 |
 | 삭제된 기록 재등장 | 오프라인 기기가 오래된 데이터를 들고 다시 연결 | CloudKit 미러링은 삭제도 동기화하므로 일반적으로 재등장하지 않음 **[가정]**. 백업 가져오기는 "전체 삭제 후 삽입"이라 다른 기기에서도 삭제·재생성이 일어남 → 동기화 중에는 가져오기 전에 모든 기기에 반영된다는 경고 |

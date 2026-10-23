@@ -1,6 +1,8 @@
 # SwiftData 스키마 버전 관리와 마이그레이션
 
-상태: SchemaV1 + 마이그레이션 계획 도입 완료 (커밋 9261502). CloudKit은 꺼져 있음.
+상태: **SchemaV2(2.0.0) 사용 중** (커밋 20f054f). SchemaV1은 고정 보존. CloudKit은 꺼져 있음.
+
+이력: 버전 관리 이전(V0, ~648696e) → SchemaV1(9261502, 1ca72b6까지) → SchemaV2(20f054f).
 
 ## 1. 현재 구조
 
@@ -9,7 +11,7 @@
 - 여는 곳: `Persistence.openContainer` 한 곳. 앱과 App Intent 모두 `StoreController.shared`를 통해 같은 컨테이너를 쓴다. App Intent는 앱 프로세스에서 실행되며 별도 확장(Extension)이나 App Group 저장소는 없다.
 - 옵션: `ModelConfiguration(schema:url:cloudKitDatabase: .none)`. CloudKit은 명시적으로 끈다(아래 4절).
 
-### 모델 (`SchemaV1`, 1.0.0)
+### SchemaV1 모델 (1.0.0, `SchemaV1Models.swift`에 고정 — 수정 금지)
 | 모델 | 속성 | 비고 |
 |---|---|---|
 | Stack | `id`(unique), `createdAt`, `captureSourceRaw`, `statusRaw`, `latitude?`, `longitude?`, `horizontalAccuracy?`, `locationStatusRaw`, `placeLabel?`, `completedAt?`, `transactionId?`, `discardedAt?`, `isPossibleDuplicate`, `placeLookupAttempts = 0`, `placeLabelVersion = 0` | enum은 raw String |
@@ -17,7 +19,12 @@
 | ExpenseCategory | `id`(unique), `name`, `symbol`, `displayOrder`, `isArchived` | 삭제 대신 보관 |
 
 - SwiftData `@Relationship` 없음. 스택↔지출↔카테고리는 UUID 필드로만 연결되고, 무결성은 `StackStore`와 `BackupService.validate`가 지킨다.
-- 앱 코드는 `typealias Stack = SchemaV1.Stack`처럼 별칭으로 현재 버전 모델을 쓴다.
+- 앱 코드는 `typealias Stack = SchemaV2.Stack`처럼 별칭으로 현재 버전 모델을 쓴다.
+
+### SchemaV2 (2.0.0, 현재)
+- V1과 속성 이름·타입이 같다. 차이: 모든 `id`의 unique 제거, 필수 속성마다 기본값(스키마 요건용, init은 항상 실제 값을 넣음), `ExpenseCategory.defaultKey: String?` 추가.
+- CloudKit 조건 위반 0건 (`CloudKitAudit` 테스트).
+- V1 → V2 단계: `.custom` — 경량 스키마 변경 후 `didMigrate`에서 시드로 만든 기본 카테고리에 `defaultKey`를 붙인다. ID·값은 바꾸지 않는다.
 
 ### UserDefaults (SwiftData 밖)
 `reminderEnabled`, `reminderMinutes`, `locationCaptureEnabled`, `appearance`, `hasCompletedOnboarding`, `storeSchemaVersion`(마지막으로 연 스키마 버전).
@@ -52,11 +59,22 @@
 | 모델 이름 변경·삭제 | 안 됨 | 새 모델 + 복사 단계 |
 | `cloudKitDatabase` 기본값(.automatic) 방치 | – | iCloud 권한이 생기는 순간 검증 안 된 모델로 동기화 시작. `.none` 명시로 차단함 |
 
-## 5. 다음 버전 추가 절차
+## 5. 마이그레이션 단계가 실패하면 (실측)
+테스트(`failedMigrationStepLeavesARestorableCopy`)로 확인한 동작:
+- `.custom` 단계의 후처리(`didMigrate`)가 실패하면 컨테이너 생성은 실패하지만 **원본 파일은 이미 V2 스키마로 바뀌어 있다.** Core Data가 스키마 변경을 먼저 적용하기 때문이다.
+- 따라서 원본 보존은 **열기 전 사본**(`StoreBackups/before-2.0.0-*`)에 기댄다. 사본은 원본과 바이트 단위로 같고 SchemaV1으로 다시 열린다.
+- 앱은 복구 화면을 보여주고, 다시 시도하면 바뀐 원본이 V2로 열리며 레코드는 모두 그대로다. 빠지는 것은 후처리(기본 카테고리 표시)뿐이고, 표시가 하나도 없는 저장소는 앱 시작 시 같은 규칙으로 다시 표시한다.
+- 그러므로 `didMigrate`에는 데이터를 바꾸는 위험한 작업을 넣지 않는다. 현재는 옵셔널 필드 하나를 채우는 일만 한다.
+
+## 6. 다음 버전 추가 절차
 1. `SchemaV2: VersionedSchema`를 만들고 모델을 복사해 바꾼다. `typealias`를 V2로 옮긴다.
 2. `TookTookMigrationPlan.schemas`에 V2를 붙이고 `stages`에 단계를 추가한다.
 3. `Persistence.openContainer`의 `Schema(versionedSchema:)`와 `currentSchemaVersion`을 V2로 바꾼다. 버전 표식이 달라지므로 첫 실행 때 자동으로 열기 전 사본이 생긴다.
-4. 그 시점의 V1 저장소를 새 픽스처(StoreV1)로 남기고, V0·V1 픽스처 둘 다 V2로 여는 테스트를 추가한다.
+4. 코드를 바꾸기 **전에** 현재 스키마로 픽스처를 만들어 커밋한다(StoreV0 b0e213e, StoreV1 c973cd9처럼). 모든 이전 픽스처를 새 버전으로 여는 테스트를 추가한다.
 5. 실기기 저장소 사본으로 `TOOKTOOK_EXTERNAL_STORE_DIR` 테스트를 실행한 뒤에만 기기에 설치한다.
 
-CloudKit용 V2 후보(unique 제거 + 기본값)는 `TookTookTests/CloudKitCompatibilityTests.swift`의 `SchemaV2Candidate`로 이미 경량 마이그레이션이 무손실임을 확인했다. 실제 도입은 `docs/ICLOUD_MIGRATION_PLAN.md`를 따른다.
+## 7. ID와 기본 카테고리 정책 (V2)
+- **ID 중복**: unique가 없으므로 `UniqueID`가 새 레코드 ID가 이미 있으면 다시 뽑는다(같은 컨텍스트에서 확인 후 삽입, unique 제약 같은 원자성은 없음). `DuplicateIDResolver`는 앱 시작 때 값이 완전히 같은 사본만 하나로 줄이고, 값이 다른 같은 ID 레코드는 지우거나 덮어쓰지 않고 로그만 남긴다. 백업 파일 안의 ID 중복은 `BackupService.validate`가 가져오기 전에 거부한다.
+- **기본 카테고리**: 새 설치는 고정 UUID(`DefaultCategory.fixedID`)와 `defaultKey`로 시드한다. 기존 설치본은 UUID와 거래 참조를 그대로 두고, 시드와 이름·아이콘·순서가 모두 같고 후보가 하나뿐인 카테고리에만 `defaultKey`를 붙인다. 이름을 바꾼 기본 카테고리와 사용자가 만든 같은 이름 카테고리는 표시하지 않는다(잘못 합치는 것보다 따로 남는 편이 안전).
+- **병합(동기화 대비)**: 같은 `defaultKey`가 여러 개면 대표(고정 UUID → 거래 많은 것 → UUID 작은 것)로 거래를 옮기고 나머지는 **보관**한다(삭제하지 않음). 하나라도 사용 중이었으면 대표는 활성. 이름은 대표 것을 쓴다.
+- 이전 백업(defaultKey 없음)을 가져오면 같은 표시 규칙을 적용한다.
