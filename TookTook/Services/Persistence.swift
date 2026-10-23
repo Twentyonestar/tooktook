@@ -14,7 +14,7 @@ enum Persistence {
         URL.applicationSupportDirectory.appending(path: "StoreBackups", directoryHint: .isDirectory)
     }
 
-    static let currentSchemaVersion = SchemaV1.versionIdentifier.description
+    static let currentSchemaVersion = SchemaV2.versionIdentifier.description
     static let schemaVersionKey = "storeSchemaVersion"
     static let keptBackups = 3
 
@@ -30,7 +30,7 @@ enum Persistence {
             _ = try? copyStoreFiles(at: storeURL, into: backupsDirectory, label: "before-\(currentSchemaVersion)")
         }
 
-        let schema = Schema(versionedSchema: SchemaV1.self)
+        let schema = Schema(versionedSchema: SchemaV2.self)
         let configuration = ModelConfiguration(schema: schema, url: storeURL, cloudKitDatabase: .none)
         let container = try ModelContainer(
             for: schema,

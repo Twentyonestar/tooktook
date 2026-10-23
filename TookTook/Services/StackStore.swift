@@ -29,7 +29,7 @@ struct StackStore {
         let recent = FetchDescriptor<Stack>(predicate: #Predicate { $0.createdAt >= windowStart })
         let hasRecent = (try? context.fetchCount(recent)) ?? 0 > 0
 
-        let stack = Stack(createdAt: date, captureSource: source, isPossibleDuplicate: hasRecent)
+        let stack = Stack(id: UniqueID.newStackID(in: context), createdAt: date, captureSource: source, isPossibleDuplicate: hasRecent)
         context.insert(stack)
         try save()
         return stack
@@ -40,6 +40,7 @@ struct StackStore {
         guard let categoryId else { throw StoreError.missingCategory }
 
         let transaction = LedgerTransaction(
+            id: UniqueID.newTransactionID(in: context),
             sourceStackId: stack.id,
             amountKRW: amountKRW,
             categoryId: categoryId,
@@ -115,8 +116,12 @@ struct StackStore {
     func seedDefaultCategoriesIfNeeded() {
         let count = (try? context.fetchCount(FetchDescriptor<ExpenseCategory>())) ?? 0
         guard count == 0 else { return }
-        for (index, item) in ExpenseCategory.defaults.enumerated() {
-            context.insert(ExpenseCategory(name: item.name, symbol: item.symbol, displayOrder: index))
+        // 고정 UUID와 defaultKey로 만들어서, 다른 기기에서 만든 기본 카테고리와 같은 레코드가 된다.
+        for (index, definition) in DefaultCategory.all.enumerated() {
+            context.insert(ExpenseCategory(
+                id: definition.fixedID, name: definition.name, symbol: definition.symbol,
+                displayOrder: index, defaultKey: definition.key
+            ))
         }
         try? save()
     }
@@ -126,7 +131,7 @@ struct StackStore {
         guard !trimmed.isEmpty else { return }
         let all = try context.fetch(FetchDescriptor<ExpenseCategory>())
         let nextOrder = (all.map(\.displayOrder).max() ?? -1) + 1
-        context.insert(ExpenseCategory(name: trimmed, symbol: symbol, displayOrder: nextOrder))
+        context.insert(ExpenseCategory(id: UniqueID.newCategoryID(in: context), name: trimmed, symbol: symbol, displayOrder: nextOrder))
         try save()
     }
 

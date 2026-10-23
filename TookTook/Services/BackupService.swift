@@ -10,6 +10,8 @@ struct BackupPayload: Codable {
         var symbol: String
         var displayOrder: Int
         var isArchived: Bool
+        // SchemaV2에서 추가. 이전 백업 파일에는 없다.
+        var defaultKey: String?
     }
 
     struct StackRecord: Codable {
@@ -77,7 +79,7 @@ enum BackupService {
         return BackupPayload(
             exportedAt: .now,
             categories: categories.map {
-                .init(id: $0.id, name: $0.name, symbol: $0.symbol, displayOrder: $0.displayOrder, isArchived: $0.isArchived)
+                .init(id: $0.id, name: $0.name, symbol: $0.symbol, displayOrder: $0.displayOrder, isArchived: $0.isArchived, defaultKey: $0.defaultKey)
             },
             stacks: stacks.map {
                 .init(
@@ -157,11 +159,18 @@ enum BackupService {
         for stack in try context.fetch(FetchDescriptor<Stack>()) { context.delete(stack) }
         for category in try context.fetch(FetchDescriptor<ExpenseCategory>()) { context.delete(category) }
 
+        var restoredCategories: [ExpenseCategory] = []
         for record in payload.categories {
-            context.insert(ExpenseCategory(
+            let category = ExpenseCategory(
                 id: record.id, name: record.name, symbol: record.symbol,
-                displayOrder: record.displayOrder, isArchived: record.isArchived
-            ))
+                displayOrder: record.displayOrder, isArchived: record.isArchived, defaultKey: record.defaultKey
+            )
+            context.insert(category)
+            restoredCategories.append(category)
+        }
+        // defaultKey가 없는 이전 백업이면 마이그레이션과 같은 규칙으로 기본 카테고리를 표시한다.
+        if !payload.categories.contains(where: { $0.defaultKey != nil }) {
+            DefaultCategory.tagSeededDefaults(in: restoredCategories)
         }
         for record in payload.stacks {
             let stack = Stack(

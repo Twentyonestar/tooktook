@@ -47,6 +47,10 @@ struct RootView: View {
         .task {
             // 권한 요청은 온보딩에서만 한다.
             StackStore(context: context).seedDefaultCategoriesIfNeeded()
+            // 정상이라면 아무 일도 하지 않는다. 같은 ID의 동일 사본 정리, 같은 기본 카테고리 병합.
+            DefaultCategory.tagIfNeverTagged(in: context)
+            _ = try? DuplicateIDResolver.resolve(in: context)
+            _ = try? DefaultCategoryMerger.mergeDuplicates(in: context)
             await NotificationPermission.shared.refresh()
             await ReminderScheduler.refresh(pendingCount: pendingStacks.count)
         }
