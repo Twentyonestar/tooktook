@@ -14,7 +14,7 @@ struct StatsView: View {
     private struct CategoryTotal: Identifiable {
         let id: UUID
         let name: String
-        let symbol: String
+        let category: ExpenseCategory?
         let color: Color
         let amount: Int64
     }
@@ -40,7 +40,7 @@ struct StatsView: View {
                 return CategoryTotal(
                     id: id,
                     name: category?.name ?? "알 수 없음",
-                    symbol: category?.symbol ?? "questionmark.circle",
+                    category: category,
                     color: CategoryPalette.color(for: category),
                     amount: items.reduce(0) { $0 + $1.amountKRW }
                 )
@@ -94,11 +94,17 @@ struct StatsView: View {
 
                         ForEach(categoryTotals) { item in
                             AdaptiveRow {
-                                // 아이콘을 차트와 같은 색으로 칠해 범례 역할을 하고, 이름·비율은 텍스트로 함께 보여준다.
-                                Label {
-                                    Text(item.name)
-                                } icon: {
-                                    Image(systemName: item.symbol).foregroundStyle(item.color)
+                                // 이모지는 색을 입힐 수 없어 차트 색 점을 범례로 둔다. 이름·비율은 텍스트로 함께 보여준다.
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(item.color)
+                                        .frame(width: 10, height: 10)
+                                        .accessibilityHidden(true)
+                                    Label {
+                                        Text(item.name)
+                                    } icon: {
+                                        CategoryIcon(category: item.category).foregroundStyle(item.color)
+                                    }
                                 }
                             } trailing: {
                                 Text(percentText(item.amount))

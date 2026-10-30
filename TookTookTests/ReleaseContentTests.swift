@@ -49,4 +49,19 @@ struct ReleaseContentTests {
         #expect(colors.allSatisfy { $0 != nil })
         #expect(Set(colors.compactMap { $0?.description }).count == DefaultCategory.all.count)
     }
+
+    @Test func 기본_카테고리는_서로_다른_이모지로_보인다() {
+        let emojis = DefaultCategory.all.compactMap { DefaultCategory.emoji(defaultKey: $0.key, symbol: $0.symbol) }
+        #expect(emojis.count == DefaultCategory.all.count)
+        #expect(Set(emojis).count == DefaultCategory.all.count)
+    }
+
+    @Test func 아이콘을_바꿨거나_직접_만든_카테고리는_이모지를_쓰지_않는다() {
+        // 사용자가 기본 카테고리의 아이콘을 바꾸면 그 선택을 존중한다.
+        #expect(DefaultCategory.emoji(defaultKey: "food", symbol: "cart.fill") == nil)
+        // 직접 만든 카테고리(defaultKey 없음)나 알 수 없는 키는 저장된 SF Symbol을 그대로 쓴다.
+        #expect(DefaultCategory.emoji(defaultKey: nil, symbol: "fork.knife") == nil)
+        #expect(DefaultCategory.emoji(defaultKey: "unknown", symbol: "fork.knife") == nil)
+        #expect(DefaultCategory.emoji(defaultKey: "food", symbol: "fork.knife") == "🍚")
+    }
 }

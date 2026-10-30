@@ -208,7 +208,7 @@ struct CategoryGrid: View {
                     selection = category.id
                 } label: {
                     VStack(spacing: 6) {
-                        Image(systemName: category.symbol)
+                        CategoryIcon(category: category)
                             .font(.title3)
                         Text(category.name)
                             .font(.caption)
