@@ -6,3 +6,4 @@ build/
 .swiftpm/
 build-release/
 _site/
+build-device/
