@@ -94,11 +94,17 @@ struct StatsView: View {
 
                         ForEach(categoryTotals) { item in
                             AdaptiveRow {
-                                // 아이콘을 차트와 같은 색으로 칠해 범례 역할을 하고, 이름·비율은 텍스트로 함께 보여준다.
-                                Label {
-                                    Text(item.name)
-                                } icon: {
-                                    Image(systemName: item.symbol).foregroundStyle(item.color)
+                                // 앞의 색 점이 차트 범례 역할을 하고, 아이콘은 한 가지 색으로 통일한다.
+                                HStack(spacing: 10) {
+                                    Circle()
+                                        .fill(item.color)
+                                        .frame(width: 10, height: 10)
+                                        .accessibilityHidden(true)
+                                    Label {
+                                        Text(item.name)
+                                    } icon: {
+                                        Image(systemName: item.symbol).foregroundStyle(.secondary)
+                                    }
                                 }
                             } trailing: {
                                 Text(percentText(item.amount))
