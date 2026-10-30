@@ -19,7 +19,7 @@ struct CaptureStackIntent: AppIntent {
         await LocationEnricher.attachLocation(to: stack, in: context)
 
         let time = stack.createdAt.formatted(date: .omitted, time: .shortened)
-        return .result(dialog: "\(time) 기록을 남겼어요")
+        return .result(dialog: "\(time) 지출 기록을 남겼어요")
     }
 
     /// 로컬 저장소에만 의존한다. 네트워크·위치·알림과 무관하게 여기까지 성공해야 '남겼어요'를 보여준다.
