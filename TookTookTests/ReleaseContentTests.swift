@@ -38,9 +38,10 @@ struct ReleaseContentTests {
         })
     }
 
-    @Test func 웹_주소는_게시_전까지_비워_둔다() {
-        #expect(AppLinks.privacyPolicyURL == nil)
-        #expect(AppLinks.supportURL == nil)
+    /// 게시 후 HTTPS 접속을 확인한 주소만 쓴다(2026-10-31 확인). 주소를 바꾸면 다시 확인하고 이 테스트를 고친다.
+    @Test func 웹_주소는_게시해_확인한_HTTPS_주소다() {
+        #expect(AppLinks.privacyPolicyURL?.absoluteString == "https://twentyonestar.github.io/tooktook/privacy/")
+        #expect(AppLinks.supportURL?.absoluteString == "https://twentyonestar.github.io/tooktook/support/")
     }
 
     @Test func 기본_카테고리_색상은_모두_다르다() {

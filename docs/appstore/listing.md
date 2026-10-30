@@ -60,9 +60,9 @@ App Store Connect에 그대로 붙여넣을 수 있게 정리했다. 글자 수 
 ## URL
 | 항목 | 값 |
 |---|---|
-| 지원 URL (필수) | https://twentyonestar.github.io/tooktook/support/ (게시 확인 후 사용) |
+| 지원 URL (필수) | https://twentyonestar.github.io/tooktook/support/ (2026-10-31 HTTPS 게시 확인) |
 | 마케팅 URL | 비워도 됨 |
-| 개인정보 처리방침 URL (필수) | https://twentyonestar.github.io/tooktook/privacy/ (게시 확인 후 사용) |
+| 개인정보 처리방침 URL (필수) | https://twentyonestar.github.io/tooktook/privacy/ (2026-10-31 HTTPS 게시 확인) |
 
 ## 스크린샷
 iPhone 6.9인치(1320×2868) 4장: `docs/appstore/screenshots/01-inbox.png` → `02-complete.png` → `03-stats.png` → `04-history.png` 순서로 올린다. 6.9인치만 올리면 작은 기기용은 자동으로 축소돼 쓰인다.

@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// 외부 링크. 게시 전에는 nil로 두고, 임의 주소를 넣지 않는다.
+/// 외부 링크. GitHub Pages(.github/workflows/pages.yml)로 게시하고 HTTPS 접속을 확인한 주소만 넣는다.
+/// nil이면 해당 링크를 숨긴다. 처리방침은 네트워크 없이도 앱 안의 사본으로 볼 수 있다.
 enum AppLinks {
-    /// 개인정보 처리방침을 웹에 게시한 뒤 주소를 넣는다. nil이면 앱 안의 사본만 보여준다.
-    static let privacyPolicyURL: URL? = nil
-    /// 지원 페이지를 게시한 뒤 주소를 넣는다. nil이면 설정 화면에 링크를 보여주지 않는다.
-    static let supportURL: URL? = nil
+    static let privacyPolicyURL: URL? = URL(string: "https://twentyonestar.github.io/tooktook/privacy/")
+    static let supportURL: URL? = URL(string: "https://twentyonestar.github.io/tooktook/support/")
 }
 
 /// 앱에 함께 들어가는 PrivacyPolicy.md를 보여준다. 웹 게시본과 같은 파일이다.
