@@ -8,6 +8,8 @@ enum PrefKey {
     static let locationCaptureEnabled = "locationCaptureEnabled"
     static let appearance = "appearance"
     static let hasCompletedOnboarding = "hasCompletedOnboarding"
+    /// 뒷면 탭·단축어로 기록할 때 저장 전에 한 번 묻는다. 기본 켬.
+    static let confirmBeforeCapture = "confirmBeforeCapture"
 }
 
 enum Preferences {
@@ -16,6 +18,10 @@ enum Preferences {
     static var reminderEnabled: Bool { reminderEnabled(in: .standard) }
 
     static var reminderMinutes: Int { reminderMinutes(in: .standard) }
+
+    static func confirmBeforeCapture(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: PrefKey.confirmBeforeCapture) as? Bool ?? true
+    }
 
     static func reminderEnabled(in defaults: UserDefaults) -> Bool {
         defaults.object(forKey: PrefKey.reminderEnabled) as? Bool ?? true

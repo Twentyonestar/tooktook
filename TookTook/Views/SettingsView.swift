@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage(PrefKey.reminderMinutes) private var reminderMinutes = Preferences.defaultReminderMinutes
     @AppStorage(PrefKey.locationCaptureEnabled) private var locationCaptureEnabled = true
     @AppStorage(PrefKey.appearance) private var appearance = Appearance.system.rawValue
+    @AppStorage(PrefKey.confirmBeforeCapture) private var confirmBeforeCapture = true
 
     @State private var location = LocationService.shared
     @State private var notificationPermission = NotificationPermission.shared
@@ -30,9 +31,16 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("기록 방법") {
+                Section {
                     NavigationLink("뒷면 탭으로 기록 남기기") { BackTapGuideView() }
                     NavigationLink("잠금화면 컨트롤 추가하기") { LockScreenGuideView() }
+                    Toggle("기록하기 전에 확인", isOn: $confirmBeforeCapture)
+                } header: {
+                    Text("기록 방법")
+                } footer: {
+                    Text(confirmBeforeCapture
+                        ? "뒷면 탭 후 '지출 1건을 임시로 기록할까요?'가 떠요. 실수로 두드렸다면 취소하면 기록되지 않아요."
+                        : "뒷면 탭만으로 바로 기록돼요. 실수로 남긴 기록은 지출 기록 탭에서 밀어서 지울 수 있어요.")
                 }
 
                 Section {
@@ -149,7 +157,7 @@ struct SettingsView: View {
         case .active, .unknown: "정리할 기록이 있을 때만 알려드려요."
         case .needsPermission: "알림 권한을 허용하면 이 시각에 알려드려요."
         case .blockedBySystem: "지금은 알림이 오지 않아요. 선택한 시각은 저장돼 있어서, 권한을 허용하면 바로 다시 예약돼요."
-        case .off: "알림을 꺼도 언제든 기록 탭에서 정리할 수 있어요."
+        case .off: "알림을 꺼도 언제든 지출 기록 탭에서 정리할 수 있어요."
         }
     }
 
