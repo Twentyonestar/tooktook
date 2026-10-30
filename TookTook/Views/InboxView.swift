@@ -262,7 +262,7 @@ struct CompletedStackRow: View {
 
     var body: some View {
         AdaptiveRow(spacing: 12) {
-            CategoryIcon(category: category, fallbackSymbol: "checkmark.circle.fill")
+            Image(systemName: category?.symbol ?? "checkmark.circle.fill")
                 .font(.title3)
                 .foregroundStyle(.secondary)
                 .frame(width: 32)

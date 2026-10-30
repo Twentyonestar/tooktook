@@ -37,5 +37,4 @@ xcrun simctl launch <ID> com.twentyonestar.tooktook -TookTookDemo
 ```
 xcrun devicectl device process launch --device <기기 ID> --terminate-existing com.twentyonestar.tooktook -- -TookTookDemo -TookTookDemoSeparateStore
 ```
-시뮬레이터(iOS 26.3)는 이모지를 "?" 상자로 그리므로 이모지가 보이는 스크린샷은 실기기에서 찍는다.
 찍은 뒤 `xcrun swift tools/flatten-screenshots.swift docs/appstore/screenshots/*.png`로 알파 채널을 없앤다.

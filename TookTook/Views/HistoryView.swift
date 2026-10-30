@@ -94,7 +94,7 @@ struct TransactionRow: View {
 
     var body: some View {
         AdaptiveRow(spacing: 12) {
-            CategoryIcon(category: category)
+            Image(systemName: category?.symbol ?? "questionmark.circle")
                 .font(.title3)
                 .foregroundStyle(.tint)
                 .frame(width: 32)

@@ -9,30 +9,22 @@ struct DefaultCategory: Equatable {
     let key: String
     let name: String
     let symbol: String
-    /// 화면에 보여줄 Apple 이모지. 저장 데이터(symbol)는 바꾸지 않고 표시할 때만 쓴다.
-    let emoji: String
     /// 새 설치에서 쓰는 고정 ID. 한 번 배포하면 바꾸지 않는다.
     let fixedID: UUID
 
     static let all: [DefaultCategory] = [
-        .init(key: "food", name: "식비", symbol: "fork.knife", emoji: "🍚", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000001")!),
-        .init(key: "cafe", name: "카페", symbol: "cup.and.saucer.fill", emoji: "☕️", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000002")!),
-        .init(key: "transport", name: "교통", symbol: "bus.fill", emoji: "🚌", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000003")!),
-        .init(key: "shopping", name: "쇼핑", symbol: "bag.fill", emoji: "🛍️", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000004")!),
-        .init(key: "living", name: "생활", symbol: "house.fill", emoji: "🏠", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000005")!),
-        .init(key: "culture", name: "문화", symbol: "ticket.fill", emoji: "🎬", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000006")!),
-        .init(key: "medical", name: "의료", symbol: "cross.case.fill", emoji: "💊", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000007")!),
-        .init(key: "other", name: "기타", symbol: "ellipsis.circle.fill", emoji: "🧾", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000008")!),
+        .init(key: "food", name: "식비", symbol: "fork.knife", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000001")!),
+        .init(key: "cafe", name: "카페", symbol: "cup.and.saucer.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000002")!),
+        .init(key: "transport", name: "교통", symbol: "bus.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000003")!),
+        .init(key: "shopping", name: "쇼핑", symbol: "bag.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000004")!),
+        .init(key: "living", name: "생활", symbol: "house.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000005")!),
+        .init(key: "culture", name: "문화", symbol: "ticket.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000006")!),
+        .init(key: "medical", name: "의료", symbol: "cross.case.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000007")!),
+        .init(key: "other", name: "기타", symbol: "ellipsis.circle.fill", fixedID: UUID(uuidString: "7D7D0000-0000-4000-8000-000000000008")!),
     ]
 
     static func forKey(_ key: String) -> DefaultCategory? {
         all.first { $0.key == key }
-    }
-
-    /// 기본 카테고리이고 아이콘을 바꾸지 않았을 때만 이모지를 쓴다. 사용자가 고른 아이콘이 있으면 그것을 존중한다.
-    static func emoji(defaultKey: String?, symbol: String) -> String? {
-        guard let defaultKey, let definition = forKey(defaultKey), definition.symbol == symbol else { return nil }
-        return definition.emoji
     }
 
     /// SchemaV2 이전에 만들어진 카테고리 중 기본 시드로 만든 것에 defaultKey를 붙인다.

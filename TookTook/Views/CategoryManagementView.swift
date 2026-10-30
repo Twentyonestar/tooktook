@@ -20,7 +20,7 @@ struct CategoryManagementView: View {
                     Button {
                         editing = category
                     } label: {
-                        Label { Text(category.name) } icon: { CategoryIcon(category: category) }
+                        Label(category.name, systemImage: category.symbol)
                     }
                     .tint(.primary)
                     .swipeActions {
@@ -37,7 +37,7 @@ struct CategoryManagementView: View {
                 Section("보관됨") {
                     ForEach(archived) { category in
                         HStack {
-                            Label { Text(category.name) } icon: { CategoryIcon(category: category) }
+                            Label(category.name, systemImage: category.symbol)
                                 .foregroundStyle(.secondary)
                             Spacer()
                             Button("복원") { setArchived(category, false) }
