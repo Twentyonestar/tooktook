@@ -18,7 +18,7 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $router.selectedTab) {
             InboxView()
-                .tabItem { Label("기록", systemImage: "tray.full") }
+                .tabItem { Label("지출 기록", systemImage: "tray.full") }
                 .badge(pendingStacks.count)
                 .tag(AppTab.inbox)
 

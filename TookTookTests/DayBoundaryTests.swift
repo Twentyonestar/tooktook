@@ -110,4 +110,27 @@ struct DayBoundaryTests {
         #expect(LedgerPeriod.isToday(spentAt, now: now, calendar: losAngeles))
         #expect(!LedgerPeriod.isToday(spentAt, now: date(seoul, 2026, 10, 24, 18, 0), calendar: losAngeles))
     }
+
+    @Test func pendingGroupsByDayNewestFirst() {
+        let seoul = calendar()
+        let dates = [
+            date(seoul, 2026, 10, 29, 23, 50),
+            date(seoul, 2026, 10, 30, 0, 10),
+            date(seoul, 2026, 10, 30, 8, 0),
+            date(seoul, 2026, 10, 31, 9, 0),
+        ]
+        let groups = LedgerPeriod.groupedByDay(dates, date: { $0 }, calendar: seoul)
+        #expect(groups.map(\.day) == [date(seoul, 2026, 10, 31, 0), date(seoul, 2026, 10, 30, 0), date(seoul, 2026, 10, 29, 0)])
+        // 자정 직전·직후는 다른 날로 나뉘고, 같은 날 안의 순서는 유지된다.
+        #expect(groups[1].items == [dates[1], dates[2]])
+        #expect(groups[2].items == [dates[0]])
+    }
+
+    @Test func daysAgoUsesCalendarDays() {
+        let seoul = calendar()
+        let now = date(seoul, 2026, 10, 31, 0, 30)
+        #expect(LedgerPeriod.daysAgo(date(seoul, 2026, 10, 31, 0, 0), now: now, calendar: seoul) == 0)
+        #expect(LedgerPeriod.daysAgo(date(seoul, 2026, 10, 30, 23, 59), now: now, calendar: seoul) == 1)
+        #expect(LedgerPeriod.daysAgo(date(seoul, 2026, 10, 28, 12, 0), now: now, calendar: seoul) == 3)
+    }
 }

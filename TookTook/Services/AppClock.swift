@@ -47,6 +47,18 @@ enum LedgerPeriod {
             .reduce(0) { $0 + $1.amountKRW }
     }
 
+    /// 날짜별로 묶는다. 최근 날짜가 먼저 오고, 같은 날 안에서는 받은 순서를 유지한다.
+    static func groupedByDay<Item>(_ items: [Item], date: (Item) -> Date, calendar: Calendar) -> [(day: Date, items: [Item])] {
+        Dictionary(grouping: items) { calendar.startOfDay(for: date($0)) }
+            .map { (day: $0.key, items: $0.value) }
+            .sorted { $0.day > $1.day }
+    }
+
+    /// 오늘이면 0, 어제면 1. 섹션 제목을 '오늘'·'어제'로 쓸지 정할 때 쓴다.
+    static func daysAgo(_ day: Date, now: Date, calendar: Calendar) -> Int {
+        calendar.dateComponents([.day], from: calendar.startOfDay(for: day), to: calendar.startOfDay(for: now)).day ?? 0
+    }
+
     static func todayPendingCount(_ pending: [Stack], now: Date, calendar: Calendar) -> Int {
         pending.filter { isToday($0.createdAt, now: now, calendar: calendar) }.count
     }

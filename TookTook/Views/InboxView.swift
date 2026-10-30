@@ -32,6 +32,18 @@ struct InboxView: View {
         LedgerPeriod.todayPendingCount(pendingStacks, now: clock.now, calendar: clock.calendar)
     }
 
+    private var pendingByDay: [(day: Date, items: [Stack])] {
+        LedgerPeriod.groupedByDay(pendingStacks, date: \.createdAt, calendar: clock.calendar)
+    }
+
+    private func dayTitle(_ day: Date) -> String {
+        switch LedgerPeriod.daysAgo(day, now: clock.now, calendar: clock.calendar) {
+        case 0: "오늘"
+        case 1: "어제"
+        default: day.formatted(.dateTime.month().day().weekday())
+        }
+    }
+
     private var completedToday: [Stack] {
         completedStacks.filter { stack in
             guard let completedAt = stack.completedAt else { return false }
@@ -52,24 +64,29 @@ struct InboxView: View {
                     summary
                 }
 
-                Section("정리 대기") {
-                    if pendingStacks.isEmpty {
-                        Text("정리할 기록이 없어요. 결제할 때 iPhone 뒷면을 두 번 톡톡 두드려 보세요.")
+                if pendingStacks.isEmpty {
+                    Section("정리 대기") {
+                        Text("정리할 지출 기록이 없어요. 결제할 때 iPhone 뒷면을 두 번 톡톡 두드려 보세요.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(pendingStacks) { stack in
-                            Button {
-                                startSession(from: stack)
-                            } label: {
-                                StackRow(stack: stack, now: clock.now)
-                            }
-                            .tint(.primary)
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    discard(stack)
+                    }
+                } else {
+                    // 최근 날짜가 위, 같은 날 안에서는 시간순.
+                    ForEach(pendingByDay, id: \.day) { group in
+                        Section("\(dayTitle(group.day)) 정리 대기 \(group.items.count)건") {
+                            ForEach(group.items) { stack in
+                                Button {
+                                    startSession(from: stack)
                                 } label: {
-                                    Label("삭제", systemImage: "trash")
+                                    StackRow(stack: stack)
+                                }
+                                .tint(.primary)
+                                .swipeActions {
+                                    Button(role: .destructive) {
+                                        discard(stack)
+                                    } label: {
+                                        Label("삭제", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -77,7 +94,7 @@ struct InboxView: View {
                 }
 
                 if !completedToday.isEmpty {
-                    Section("오늘 정리한 기록") {
+                    Section("오늘 정리한 지출 기록") {
                         ForEach(completedToday) { stack in
                             CompletedStackRow(
                                 stack: stack,
@@ -88,13 +105,13 @@ struct InboxView: View {
                     }
                 }
             }
-            .navigationTitle("기록")
+            .navigationTitle("지출 기록")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         addStackManually()
                     } label: {
-                        Label("기록 추가", systemImage: "plus")
+                        Label("지출 기록 추가", systemImage: "plus")
                     }
                 }
             }
@@ -115,7 +132,7 @@ struct InboxView: View {
         VStack(alignment: .leading, spacing: 12) {
             AdaptiveRow(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("오늘 정리할 기록")
+                    Text("오늘 정리할 지출 기록")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -203,8 +220,6 @@ struct InboxView: View {
 
 struct StackRow: View {
     let stack: Stack
-    /// AppClock 기준 '지금'. 자정이 지나면 시각만 보이던 행에 날짜가 붙는다.
-    let now: Date
 
     var body: some View {
         HStack(spacing: 12) {
@@ -242,11 +257,9 @@ struct StackRow: View {
         .accessibilityHint("금액과 카테고리를 입력해 정리합니다")
     }
 
+    /// 날짜는 섹션 제목에 있으므로 시각만 보여준다.
     private var timeText: String {
-        if LedgerPeriod.isToday(stack.createdAt, now: now, calendar: .autoupdatingCurrent) {
-            return stack.createdAt.formatted(date: .omitted, time: .shortened)
-        }
-        return stack.createdAt.formatted(.dateTime.month().day().hour().minute())
+        stack.createdAt.formatted(date: .omitted, time: .shortened)
     }
 }
 
