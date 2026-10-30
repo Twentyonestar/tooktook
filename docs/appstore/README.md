@@ -1,7 +1,7 @@
 # App Store 출시 체크리스트 (툭툭가계부 1.0)
 
 ## 준비 완료 (코드·파일)
-- [x] 앱 아이콘 1024×1024, 투명도 없음 (사용자가 만든 최종 아이콘, 2026-10-30 교체. `tools/make-temp-icon.swift`는 이전 임시 아이콘 생성기)
+- [x] 앱 아이콘 1024×1024, 투명도 없음 (사용자가 만든 ₩ 아이콘, 2026-10-31 교체. `tools/make-temp-icon.swift`는 이전 임시 아이콘 생성기)
 - [x] 개인정보 매니페스트 `TookTook/PrivacyInfo.xcprivacy`: 추적 없음, 수집 데이터 없음, UserDefaults(CA92.1)·파일 생성 날짜(C617.1) 사용 이유
 - [x] 암호화 신고 `ITSAppUsesNonExemptEncryption = NO`
 - [x] 버전 1.0 (1), 표시 이름 툭툭가계부, 카테고리 금융
