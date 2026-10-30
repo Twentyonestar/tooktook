@@ -5,3 +5,4 @@ build/
 *.xcuserstate
 .swiftpm/
 build-release/
+_site/

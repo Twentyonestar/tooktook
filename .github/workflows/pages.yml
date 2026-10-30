@@ -1,0 +1,44 @@
+# 개인정보 처리방침·지원 페이지를 GitHub Pages에 게시한다.
+# 처리방침은 앱 번들과 같은 TookTook/Resources/PrivacyPolicy.md에서 만든다.
+# 저장소 Settings › Pages › Source가 "GitHub Actions"여야 배포 단계가 성공한다.
+name: Pages
+
+on:
+  push:
+    branches: [feat/mvp-scaffold]
+    paths:
+      - site/**
+      - tools/build_site.py
+      - TookTook/Resources/PrivacyPolicy.md
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/build_site.py _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

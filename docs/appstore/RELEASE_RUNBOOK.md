@@ -8,18 +8,28 @@
 - [ ] Xcode › Settings › Apple Accounts 에 유료 팀(개인 이름 + "Apple Developer Program")이 보임
 - [ ] 이 팀의 Team ID(10자리)를 확인. Membership details 페이지에 있다.
 
-## 1. 출시 전에 채워야 하는 빈칸
-| 항목 | 위치 | 지금 상태 |
-|---|---|---|
-| 문의 이메일 | `TookTook/Resources/PrivacyPolicy.md` 마지막 줄 | `[문의 이메일을 여기에 적어 주세요]` |
-| 처리방침 웹 게시 | 위 파일 내용을 노션 공개 페이지·GitHub Pages 등에 게시 | 미게시 |
-| 앱 안 웹 링크 | `TookTook/Views/PrivacyPolicyView.swift`의 `AppLinks.privacyPolicyURL` | `nil` (설정 화면은 앱에 들어 있는 사본을 보여줌) |
-| 지원 URL | App Store Connect 입력란 | 처리방침 페이지 또는 GitHub 저장소 주소 |
+## 1. 공개 페이지와 출시 전 빈칸
+처리방침·지원 페이지는 GitHub Pages로 게시한다.
+- 원본
+  - 처리방침: `TookTook/Resources/PrivacyPolicy.md` (앱 번들과 같은 파일)
+  - 지원: `site/support.md`
+  - 첫 화면: `site/index.md`
+- 빌드: `python3 tools/build_site.py`로 `_site/`를 만든다. 로컬 미리보기도 이 명령이다.
+- 배포: `.github/workflows/pages.yml`이 위 파일이 바뀌어 푸시될 때마다 자동으로 게시한다.
+- 최초 1회: 저장소 Settings › Pages › Build and deployment › Source를 **GitHub Actions**로 바꾼 뒤 Actions › Pages › Run workflow를 실행한다.
 
-웹 주소를 받으면:
-1. `AppLinks.privacyPolicyURL`에 그 주소를 넣는다. 설정 › 개인정보 처리방침 화면 오른쪽 위에 "웹에서 보기"가 생긴다.
-2. `TookTookTests/ReleaseContentTests.swift`의 `웹_처리방침_주소는_게시_전까지_비워_둔다` 테스트를 실제 주소를 확인하는 테스트로 바꾼다. 이 테스트는 임의 주소가 들어가는 것을 막으려고 둔 것이다.
-3. 처리방침 문구를 고치면 앱 사본과 웹 게시본을 같이 고친다.
+| 주소 | 용도 |
+|---|---|
+| https://twentyonestar.github.io/tooktook/privacy/ | App Store Connect 개인정보 처리방침 URL, `AppLinks.privacyPolicyURL` |
+| https://twentyonestar.github.io/tooktook/support/ | App Store Connect 지원 URL, `AppLinks.supportURL` |
+
+두 주소는 실제로 HTTPS로 열리는 것을 확인한 뒤에만 앱에 넣는다. 넣으면 `ReleaseContentTests`의 주소 테스트도 같이 바꾼다.
+
+| 빈칸 | 위치 | 지금 상태 |
+|---|---|---|
+| 문의 이메일 | `TookTook/Resources/PrivacyPolicy.md`의 `- 이메일:` 줄 | `[문의 이메일을 여기에 적어 주세요]`. 웹에서는 "준비 중"으로 보이고, 지원 페이지 문의란도 이 줄을 따라간다 |
+
+이메일을 채우면 앱 번들과 웹 페이지가 같이 바뀐다. 푸시하면 페이지는 자동으로 다시 게시된다.
 
 ## 2. 업로드 전 점검 (서명 없이 가능)
 ```bash
