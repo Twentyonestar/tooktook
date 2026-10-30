@@ -94,17 +94,11 @@ struct StatsView: View {
 
                         ForEach(categoryTotals) { item in
                             AdaptiveRow {
-                                // 앞의 색 점이 차트 범례 역할을 하고, 아이콘은 한 가지 색으로 통일한다.
-                                HStack(spacing: 10) {
-                                    Circle()
-                                        .fill(item.color)
-                                        .frame(width: 10, height: 10)
-                                        .accessibilityHidden(true)
-                                    Label {
-                                        Text(item.name)
-                                    } icon: {
-                                        Image(systemName: item.symbol).foregroundStyle(.secondary)
-                                    }
+                                // iPhone 설정처럼 차트 색 사각형에 흰 아이콘을 얹어 범례 역할을 한다.
+                                Label {
+                                    Text(item.name)
+                                } icon: {
+                                    CategoryTile(symbol: item.symbol, color: item.color)
                                 }
                             } trailing: {
                                 Text(percentText(item.amount))
@@ -152,5 +146,21 @@ struct StatsView: View {
 
     private func compactKRW(_ amount: Int64) -> String {
         amount >= 10_000 ? "\(amount / 10_000)만" : amount.formatted(.number)
+    }
+}
+
+/// 카테고리 색을 채운 둥근 사각형 안에 흰 아이콘. 글자 크기에 맞춰 함께 커진다.
+private struct CategoryTile: View {
+    let symbol: String
+    let color: Color
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 30
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.55, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(color, in: RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
