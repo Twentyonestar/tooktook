@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 /// 기본 카테고리 8개의 기기 공통 정의.
 /// 새 설치는 고정 UUID로 만들어서 여러 기기에서 같은 레코드가 된다.
@@ -52,5 +53,26 @@ struct DefaultCategory: Equatable {
         else { return }
         tagSeededDefaults(in: categories)
         try? context.save()
+    }
+}
+
+/// 통계 차트의 카테고리 색. 기본 카테고리는 키마다 고정 색, 사용자 카테고리는 순서대로 별도 색을 쓴다.
+/// 색만으로 구분하지 않도록 화면에는 항상 이름·비율이 함께 나온다.
+enum CategoryPalette {
+    private static let defaults: [String: Color] = [
+        "food": .orange, "cafe": .brown, "transport": .blue, "shopping": .pink,
+        "living": .green, "culture": .purple, "medical": .red, "other": .gray,
+    ]
+    private static let userColors: [Color] = [.teal, .indigo, .mint, .cyan, .yellow]
+
+    static func color(forDefaultKey key: String) -> Color? {
+        defaults[key]
+    }
+
+    static func color(for category: ExpenseCategory?) -> Color {
+        guard let category else { return .secondary }
+        if let key = category.defaultKey, let color = color(forDefaultKey: key) { return color }
+        let index = abs(category.displayOrder) % userColors.count
+        return userColors[index]
     }
 }

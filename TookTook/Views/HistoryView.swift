@@ -25,10 +25,10 @@ struct HistoryView: View {
             List {
                 Section {
                     MonthSwitcher(month: $month)
-                    HStack {
+                    AdaptiveRow {
                         Text("이번 달 확정 지출")
                             .foregroundStyle(.secondary)
-                        Spacer()
+                    } trailing: {
                         Text(monthTransactions.reduce(0) { $0 + $1.amountKRW }.krwText)
                             .font(.title3.bold())
                             .monospacedDigit()
@@ -54,9 +54,9 @@ struct HistoryView: View {
                             delete(offsets.map { group.items[$0] })
                         }
                     } header: {
-                        HStack {
+                        AdaptiveRow {
                             Text(group.day.formatted(.dateTime.month().day().weekday()))
-                            Spacer()
+                        } trailing: {
                             Text(group.items.reduce(0) { $0 + $1.amountKRW }.krwText)
                                 .monospacedDigit()
                         }
@@ -90,9 +90,10 @@ struct HistoryView: View {
 struct TransactionRow: View {
     let transaction: LedgerTransaction
     let category: ExpenseCategory?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 12) {
+        AdaptiveRow(spacing: 12) {
             Image(systemName: category?.symbol ?? "questionmark.circle")
                 .font(.title3)
                 .foregroundStyle(.tint)
@@ -105,9 +106,9 @@ struct TransactionRow: View {
                     .joined(separator: " · "))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             }
-            Spacer()
+        } trailing: {
             Text(transaction.amountKRW.krwText)
                 .monospacedDigit()
         }

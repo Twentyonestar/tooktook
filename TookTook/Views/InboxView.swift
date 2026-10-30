@@ -113,15 +113,16 @@ struct InboxView: View {
 
     private var summary: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
+            AdaptiveRow(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("오늘 남긴 미정리 스택")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("\(todayPendingCount)개")
                         .font(.largeTitle.bold())
                 }
-                Spacer()
+            } trailing: {
                 if pendingStacks.count > todayPendingCount {
                     Text("전체 대기 \(pendingStacks.count)개")
                         .font(.footnote)
@@ -260,7 +261,7 @@ struct CompletedStackRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        AdaptiveRow(spacing: 12) {
             Image(systemName: category?.symbol ?? "checkmark.circle.fill")
                 .font(.title3)
                 .foregroundStyle(.secondary)
@@ -273,9 +274,7 @@ struct CompletedStackRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-
-            Spacer()
-
+        } trailing: {
             if let transaction {
                 Text(transaction.amountKRW.krwText)
                     .monospacedDigit()

@@ -15,6 +15,7 @@ struct StatsView: View {
         let id: UUID
         let name: String
         let symbol: String
+        let color: Color
         let amount: Int64
     }
 
@@ -40,6 +41,7 @@ struct StatsView: View {
                     id: id,
                     name: category?.name ?? "알 수 없음",
                     symbol: category?.symbol ?? "questionmark.circle",
+                    color: CategoryPalette.color(for: category),
                     amount: items.reduce(0) { $0 + $1.amountKRW }
                 )
             }
@@ -83,15 +85,22 @@ struct StatsView: View {
                                 innerRadius: .ratio(0.6),
                                 angularInset: 1.5
                             )
-                            .foregroundStyle(by: .value("카테고리", item.name))
+                            // 이름이 같은 카테고리가 있어도 섞이지 않도록 이름 대신 카테고리별 고정 색을 직접 칠한다.
+                            .foregroundStyle(item.color)
                         }
                         .frame(height: 220)
+                        // 차트는 시각 보조. 같은 정보를 아래 목록이 이름·비율·금액 텍스트로 제공한다.
                         .accessibilityHidden(true)
 
                         ForEach(categoryTotals) { item in
-                            HStack {
-                                Label(item.name, systemImage: item.symbol)
-                                Spacer()
+                            AdaptiveRow {
+                                // 아이콘을 차트와 같은 색으로 칠해 범례 역할을 하고, 이름·비율은 텍스트로 함께 보여준다.
+                                Label {
+                                    Text(item.name)
+                                } icon: {
+                                    Image(systemName: item.symbol).foregroundStyle(item.color)
+                                }
+                            } trailing: {
                                 Text(percentText(item.amount))
                                     .foregroundStyle(.secondary)
                                 Text(item.amount.krwText)

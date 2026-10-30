@@ -59,6 +59,7 @@ struct StackCompletionForm: View {
     let onFinish: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(filter: #Predicate<ExpenseCategory> { !$0.isArchived }, sort: \ExpenseCategory.displayOrder)
     private var categories: [ExpenseCategory]
 
@@ -120,7 +121,11 @@ struct StackCompletionForm: View {
         .navigationTitle("\(position) / \(total)")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
+            // 큰 글자 크기에서는 두 버튼을 세로로 쌓아 글자가 끊기지 않게 한다.
+            let buttonLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 12))
+            buttonLayout {
                 Button {
                     onFinish()
                 } label: {
