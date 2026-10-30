@@ -162,14 +162,14 @@ struct TransactionEditView: View {
             Section {
                 DatePicker("결제 시각", selection: $occurredAt)
                 if let stack = sourceStack {
-                    LabeledContent("스택 생성 시각", value: stack.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    LabeledContent("처음 기록한 시각", value: stack.createdAt.formatted(date: .abbreviated, time: .shortened))
                     if let place = stack.placeLabel {
                         LabeledContent("위치", value: place)
                     }
                 }
             } footer: {
                 if sourceStack != nil {
-                    Text("결제 시각을 바꿔도 원래 스택을 남긴 시각은 유지돼요.")
+                    Text("결제 시각을 바꿔도 처음 기록한 시각은 유지돼요.")
                 }
             }
             Section {

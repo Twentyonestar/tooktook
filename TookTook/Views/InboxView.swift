@@ -54,7 +54,7 @@ struct InboxView: View {
 
                 Section("정리 대기") {
                     if pendingStacks.isEmpty {
-                        Text("정리할 스택이 없어요. 결제할 때 iPhone 뒷면을 두 번 톡톡 두드려 보세요.")
+                        Text("정리할 기록이 없어요. 결제할 때 iPhone 뒷면을 두 번 톡톡 두드려 보세요.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {
@@ -77,7 +77,7 @@ struct InboxView: View {
                 }
 
                 if !completedToday.isEmpty {
-                    Section("오늘 정리한 스택") {
+                    Section("오늘 정리한 기록") {
                         ForEach(completedToday) { stack in
                             CompletedStackRow(
                                 stack: stack,
@@ -88,13 +88,13 @@ struct InboxView: View {
                     }
                 }
             }
-            .navigationTitle("스택")
+            .navigationTitle("기록")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         addStackManually()
                     } label: {
-                        Label("스택 추가", systemImage: "plus")
+                        Label("기록 추가", systemImage: "plus")
                     }
                 }
             }
@@ -115,7 +115,7 @@ struct InboxView: View {
         VStack(alignment: .leading, spacing: 12) {
             AdaptiveRow(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("오늘 남긴 미정리 스택")
+                    Text("오늘 정리할 기록")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -147,7 +147,7 @@ struct InboxView: View {
 
     private var undoToast: some View {
         HStack {
-            Text("스택을 삭제했어요")
+            Text("기록을 삭제했어요")
             Spacer()
             Button("실행 취소") { undoDiscard() }
                 .bold()
@@ -291,7 +291,7 @@ struct NotificationDeniedBanner: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("정리 알림이 꺼져 있어요", systemImage: "bell.slash")
                 .font(.headline)
-            Text("iPhone 설정에서 알림을 허용하면 원하는 시간에 미정리 스택을 알려드릴게요.")
+            Text("iPhone 설정에서 알림을 허용하면 원하는 시간에 정리할 기록을 알려드릴게요.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button("알림 설정 열기") {

@@ -134,12 +134,12 @@ enum BackupService {
                 throw BackupError.brokenReference("지출이 없는 카테고리를 가리켜요.")
             }
             if let stackId = transaction.sourceStackId, !stackIds.contains(stackId) {
-                throw BackupError.brokenReference("지출이 없는 스택을 가리켜요.")
+                throw BackupError.brokenReference("지출이 없는 기록을 가리켜요.")
             }
         }
         for stack in payload.stacks {
             if let transactionId = stack.transactionId, !transactionIds.contains(transactionId) {
-                throw BackupError.brokenReference("정리된 스택의 지출 기록이 없어요.")
+                throw BackupError.brokenReference("정리된 기록의 지출 내역이 없어요.")
             }
         }
     }

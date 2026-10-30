@@ -56,8 +56,8 @@ enum ReminderScheduler {
         return (0..<fallbackDays).compactMap { offset in
             guard let fireDate = calendar.date(byAdding: .day, value: offset, to: firstFire) else { return nil }
             let body = offset == 0
-                ? "정리하지 않은 스택이 \(pendingCount)개 있어요. 지금 정리해 볼까요?"
-                : "아직 정리하지 않은 스택이 있을 수 있어요."
+                ? "정리할 기록이 \(pendingCount)개 있어요. 지금 정리해 볼까요?"
+                : "아직 정리할 기록이 있을 수 있어요."
             return PlannedReminder(identifier: "\(identifierPrefix)\(offset)", fireDate: fireDate, body: body)
         }
     }
@@ -79,7 +79,7 @@ enum ReminderScheduler {
         )
         for reminder in reminders {
             let content = UNMutableNotificationContent()
-            content.title = "오늘의 스택 정리"
+            content.title = "오늘의 기록 정리"
             content.body = reminder.body
             content.sound = .default
             content.userInfo = [destinationKey: inboxDestination]

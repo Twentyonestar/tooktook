@@ -87,7 +87,7 @@ struct StackCompletionForm: View {
                     Label(stack.placeDisplay.text, systemImage: "mappin.and.ellipse")
                         .foregroundStyle(.secondary)
                     if stack.isPossibleDuplicate {
-                        Text("바로 앞 스택과 3초 안에 남겨졌어요. 연달아 결제했다면 그대로 정리하면 돼요.")
+                        Text("바로 앞 기록과 3초 안에 남겨졌어요. 연달아 결제했다면 그대로 정리하면 돼요.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -265,7 +265,7 @@ struct CompletionSummaryView: View {
             }
             .accessibilityElement(children: .combine)
             if !pendingStacks.isEmpty {
-                Text("건너뛴 스택 \(pendingStacks.count)개는 목록에 남아 있어요.")
+                Text("건너뛴 기록 \(pendingStacks.count)개는 목록에 남아 있어요.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

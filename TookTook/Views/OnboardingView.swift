@@ -5,9 +5,9 @@ import SwiftUI
 enum BackTapGuide {
     static let steps = [
         "아래 버튼으로 단축어 앱을 열고 + 를 눌러 새 단축어를 만들어요.",
-        "동작 검색에서 '툭툭가계부'의 '지출 스택 남기기'를 추가하고, 이름을 '스택 남기기'로 저장해요.",
-        "설정 > 손쉬운 사용 > 터치 > 뒷면 탭 > 이중 탭에서 맨 아래 '스택 남기기'를 골라요.",
-        "결제 후 iPhone 뒷면을 두 번 톡톡 두드리면 스택이 저장돼요.",
+        "동작 검색에서 '툭툭가계부'의 '지출 기록 남기기'를 추가하고, 이름을 '기록 남기기'로 저장해요.",
+        "설정 > 손쉬운 사용 > 터치 > 뒷면 탭 > 이중 탭에서 맨 아래 '기록 남기기'를 골라요.",
+        "결제 후 iPhone 뒷면을 두 번 톡톡 두드리면 기록이 저장돼요.",
     ]
 
     static let footnote = "뒷면 탭 목록에는 단축어 앱에 직접 만든 단축어만 보여요. 검색에 '툭툭가계부'가 나오지 않으면 툭툭가계부를 한 번 실행한 뒤 다시 찾아 주세요."
@@ -63,20 +63,20 @@ struct OnboardingView: View {
             OnboardingPage(
                 symbol: "square.stack.3d.down.right.fill",
                 title: "결제할 땐 톡톡,\n정리는 나중에",
-                message: "결제할 때 iPhone 뒷면을 두 번 두드리면 시각이 담긴 스택이 저장돼요. 금액과 카테고리는 하루 끝에 한 번에 정리하면 돼요."
+                message: "결제할 때 iPhone 뒷면을 두 번 두드리면 시각이 담긴 기록이 저장돼요. 금액과 카테고리는 하루 끝에 한 번에 정리하면 돼요."
             )
         case .location:
             OnboardingPage(
                 symbol: "location.fill",
                 title: "어디서 쓴 돈인지\n떠올리기 쉽게",
-                message: "스택을 남긴 위치를 함께 저장하면 나중에 정리할 때 기억이 쉬워져요. 위치는 이 iPhone에만 저장되고(동네 이름 확인에만 Apple 지도 서비스 사용), 허용하지 않아도 스택은 정상적으로 남아요."
+                message: "기록을 남긴 위치를 함께 저장하면 나중에 정리할 때 기억이 쉬워져요. 위치는 이 iPhone에만 저장되고(동네 이름 확인에만 Apple 지도 서비스 사용), 허용하지 않아도 기록은 정상적으로 남아요."
             )
         case .notification:
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingPage(
                     symbol: "bell.badge.fill",
                     title: "하루의 지출은\n언제 정리할까요?",
-                    message: "정리하지 않은 스택이 있을 때만 이 시각에 알려드려요. 설정에서 언제든 바꿀 수 있어요."
+                    message: "정리할 기록이 있을 때만 이 시각에 알려드려요. 설정에서 언제든 바꿀 수 있어요."
                 )
                 VStack(spacing: 0) {
                     Toggle("정리 알림 받기", isOn: $reminderEnabled)

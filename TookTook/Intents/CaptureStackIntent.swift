@@ -3,8 +3,8 @@ import SwiftData
 
 /// Back Tap·단축어·잠금화면 컨트롤에서 실행된다. 앱 화면을 열지 않고 스택만 남긴다.
 struct CaptureStackIntent: AppIntent {
-    static let title: LocalizedStringResource = "지출 스택 남기기"
-    static let description = IntentDescription("앱을 열지 않고 지금 시각으로 지출 스택을 저장합니다. 금액과 카테고리는 나중에 정리해요.")
+    static let title: LocalizedStringResource = "지출 기록 남기기"
+    static let description = IntentDescription("앱을 열지 않고 지금 시각으로 지출 기록을 남깁니다. 금액과 카테고리는 나중에 정리해요.")
     static let openAppWhenRun = false
 
     @MainActor
@@ -19,7 +19,7 @@ struct CaptureStackIntent: AppIntent {
         await LocationEnricher.attachLocation(to: stack, in: context)
 
         let time = stack.createdAt.formatted(date: .omitted, time: .shortened)
-        return .result(dialog: "\(time) 스택을 남겼어요")
+        return .result(dialog: "\(time) 기록을 남겼어요")
     }
 
     /// 로컬 저장소에만 의존한다. 네트워크·위치·알림과 무관하게 여기까지 성공해야 '남겼어요'를 보여준다.
@@ -38,10 +38,10 @@ struct TookTookShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: CaptureStackIntent(),
             phrases: [
-                "\(.applicationName)에 스택 남기기",
-                "\(.applicationName) 스택",
+                "\(.applicationName)에 기록 남기기",
+                "\(.applicationName) 기록",
             ],
-            shortTitle: "스택 남기기",
+            shortTitle: "기록 남기기",
             systemImageName: "square.stack.3d.down.right.fill"
         )
     }
