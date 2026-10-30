@@ -38,8 +38,9 @@ struct ReleaseContentTests {
         })
     }
 
-    @Test func 웹_처리방침_주소는_게시_전까지_비워_둔다() {
+    @Test func 웹_주소는_게시_전까지_비워_둔다() {
         #expect(AppLinks.privacyPolicyURL == nil)
+        #expect(AppLinks.supportURL == nil)
     }
 
     @Test func 기본_카테고리_색상은_모두_다르다() {

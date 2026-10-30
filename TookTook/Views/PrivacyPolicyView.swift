@@ -4,6 +4,8 @@ import SwiftUI
 enum AppLinks {
     /// 개인정보 처리방침을 웹에 게시한 뒤 주소를 넣는다. nil이면 앱 안의 사본만 보여준다.
     static let privacyPolicyURL: URL? = nil
+    /// 지원 페이지를 게시한 뒤 주소를 넣는다. nil이면 설정 화면에 링크를 보여주지 않는다.
+    static let supportURL: URL? = nil
 }
 
 /// 앱에 함께 들어가는 PrivacyPolicy.md를 보여준다. 웹 게시본과 같은 파일이다.

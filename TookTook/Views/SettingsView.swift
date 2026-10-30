@@ -81,6 +81,9 @@ struct SettingsView: View {
 
                 Section("정보") {
                     NavigationLink("개인정보 처리방침") { PrivacyPolicyView() }
+                    if let url = AppLinks.supportURL {
+                        Link("지원 및 문의", destination: url)
+                    }
                     LabeledContent("버전", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-")
                 }
             }
