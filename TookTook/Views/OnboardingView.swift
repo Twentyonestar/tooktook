@@ -69,7 +69,7 @@ struct OnboardingView: View {
             OnboardingPage(
                 symbol: "location.fill",
                 title: "어디서 쓴 돈인지\n떠올리기 쉽게",
-                message: "스택을 남긴 위치를 함께 저장하면 나중에 정리할 때 기억이 쉬워져요. 위치는 기기에만 저장되고, 허용하지 않아도 스택은 정상적으로 남아요."
+                message: "스택을 남긴 위치를 함께 저장하면 나중에 정리할 때 기억이 쉬워져요. 위치는 이 iPhone에만 저장되고(동네 이름 확인에만 Apple 지도 서비스 사용), 허용하지 않아도 스택은 정상적으로 남아요."
             )
         case .notification:
             VStack(alignment: .leading, spacing: 24) {

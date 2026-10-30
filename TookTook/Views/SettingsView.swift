@@ -47,7 +47,7 @@ struct SettingsView: View {
                 } header: {
                     Text("위치")
                 } footer: {
-                    Text("위치는 어디서 쓴 돈인지 떠올리는 데만 쓰이고 기기 밖으로 나가지 않아요. 권한이 없어도 스택은 정상적으로 저장돼요.")
+                    Text("위치는 어디서 쓴 돈인지 떠올리는 데만 쓰이고 이 iPhone에만 저장돼요. 동네 이름을 확인할 때만 좌표가 Apple 지도 서비스로 전달돼요. 권한이 없어도 스택은 정상적으로 저장돼요.")
                 }
 
                 Section {
@@ -79,7 +79,8 @@ struct SettingsView: View {
                     Button("전체 데이터 삭제", role: .destructive) { confirmDeleteAll = true }
                 }
 
-                Section {
+                Section("정보") {
+                    NavigationLink("개인정보 처리방침") { PrivacyPolicyView() }
                     LabeledContent("버전", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-")
                 }
             }
