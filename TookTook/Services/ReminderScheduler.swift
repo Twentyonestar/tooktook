@@ -64,6 +64,10 @@ enum ReminderScheduler {
 
     /// 실패해도 오류를 던지지 않는다. 호출하는 쪽(스택 저장)의 성공과 분리하기 위함.
     static func refresh(pendingCount: Int, now: Date = .now) async {
+        #if DEBUG
+        // 스크린샷용 별도 저장소로 실행 중이면 실제 사용자의 알림 예약을 건드리지 않는다.
+        if DemoData.usesSeparateStore { return }
+        #endif
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: allIdentifiers)
         // 권한을 다시 허용하면 앱 활성화 때 이 함수가 다시 불려 저장된 시각으로 복구된다.

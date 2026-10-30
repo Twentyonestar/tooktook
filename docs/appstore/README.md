@@ -33,4 +33,9 @@ xcrun simctl status_bar <iPhone 17 Pro Max ID> override --time "9:41" --batteryS
 xcrun simctl launch <ID> com.twentyonestar.tooktook -TookTookDemo
 ```
 `-TookTookDemo`는 DEBUG 빌드에서만, 기록이 없는 저장소에만 예시 데이터를 넣는다.
+실제 기록이 있는 iPhone에서 찍을 때는 `-TookTookDemo -TookTookDemoSeparateStore`로 실행한다. 기본 저장소 대신 `Application Support/DemoScreenshots/demo.store`를 쓰고, 설정값과 알림 예약을 바꾸지 않는다. 일반 실행으로 돌아가면 실제 기록이 보인다.
+```
+xcrun devicectl device process launch --device <기기 ID> --terminate-existing com.twentyonestar.tooktook -- -TookTookDemo -TookTookDemoSeparateStore
+```
+시뮬레이터(iOS 26.3)는 이모지를 "?" 상자로 그리므로 이모지가 보이는 스크린샷은 실기기에서 찍는다.
 찍은 뒤 `xcrun swift tools/flatten-screenshots.swift docs/appstore/screenshots/*.png`로 알파 채널을 없앤다.

@@ -6,14 +6,37 @@ import SwiftData
 /// 배포(Release) 빌드에는 이 파일이 컴파일되지 않는다. 기록이 이미 있는 저장소에는 아무것도 하지 않는다.
 @MainActor
 enum DemoData {
-    static let launchArgument = "-TookTookDemo"
+    nonisolated static let launchArgument = "-TookTookDemo"
+    /// 실제 기록이 있는 기기에서 스크린샷을 찍을 때 쓴다. 기본 저장소를 열지 않고 별도 파일에 예시 데이터를 넣으며,
+    /// 설정값과 알림 예약도 바꾸지 않는다. `-TookTookDemo`와 함께 넘긴다.
+    nonisolated static let separateStoreArgument = "-TookTookDemoSeparateStore"
+
+    nonisolated static var usesSeparateStore: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains(launchArgument) && arguments.contains(separateStoreArgument)
+    }
+
+    nonisolated static var separateStoreURL: URL {
+        URL.applicationSupportDirectory.appending(path: "DemoScreenshots/demo.store")
+    }
+
+    nonisolated static var separateBackupsDirectory: URL {
+        URL.applicationSupportDirectory.appending(path: "DemoScreenshots/StoreBackups", directoryHint: .isDirectory)
+    }
+
+    /// StoreController.shared가 처음 만들어질 때(앱 init보다 먼저일 수 있다) 부른다.
+    nonisolated static func prepareSeparateStoreDirectory() {
+        try? FileManager.default.createDirectory(at: separateStoreURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    }
 
     static func installIfRequested() {
         guard ProcessInfo.processInfo.arguments.contains(launchArgument) else { return }
-        let defaults = UserDefaults.standard
-        defaults.set(true, forKey: PrefKey.hasCompletedOnboarding)
-        defaults.set(true, forKey: PrefKey.reminderEnabled)
-        defaults.set(22 * 60, forKey: PrefKey.reminderMinutes)
+        if !usesSeparateStore {
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: PrefKey.hasCompletedOnboarding)
+            defaults.set(true, forKey: PrefKey.reminderEnabled)
+            defaults.set(22 * 60, forKey: PrefKey.reminderMinutes)
+        }
 
         guard let container = StoreController.shared.container else { return }
         let context = container.mainContext

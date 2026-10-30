@@ -105,7 +105,15 @@ final class StoreController {
         case failed(String)
     }
 
-    static let shared = StoreController()
+    static let shared: StoreController = {
+        #if DEBUG
+        if DemoData.usesSeparateStore {
+            DemoData.prepareSeparateStoreDirectory()
+            return StoreController(storeURL: DemoData.separateStoreURL, backupsDirectory: DemoData.separateBackupsDirectory)
+        }
+        #endif
+        return StoreController()
+    }()
 
     private(set) var state: State
     /// 열기에 실패했을 때 원본을 복사해 둔 위치
