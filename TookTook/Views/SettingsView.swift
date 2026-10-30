@@ -31,12 +31,12 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("기록 방법") {
-                    NavigationLink("뒷면 탭으로 스택 남기기") { BackTapGuideView() }
+                    NavigationLink("뒷면 탭으로 기록 남기기") { BackTapGuideView() }
                     NavigationLink("잠금화면 컨트롤 추가하기") { LockScreenGuideView() }
                 }
 
                 Section {
-                    Toggle("스택에 위치 함께 저장", isOn: $locationCaptureEnabled)
+                    Toggle("기록에 위치 함께 저장", isOn: $locationCaptureEnabled)
                     LabeledContent("위치 권한", value: authorizationText)
                     if location.authorizationStatus == .notDetermined {
                         Button("위치 권한 요청") { location.requestAuthorization() }
@@ -47,7 +47,7 @@ struct SettingsView: View {
                 } header: {
                     Text("위치")
                 } footer: {
-                    Text("위치는 어디서 쓴 돈인지 떠올리는 데만 쓰이고 이 iPhone에만 저장돼요. 동네 이름을 확인할 때만 좌표가 Apple 지도 서비스로 전달돼요. 권한이 없어도 스택은 정상적으로 저장돼요.")
+                    Text("위치는 어디서 쓴 돈인지 떠올리는 데만 쓰이고 이 iPhone에만 저장돼요. 동네 이름을 확인할 때만 좌표가 Apple 지도 서비스로 전달돼요. 권한이 없어도 기록은 정상적으로 저장돼요.")
                 }
 
                 Section {
@@ -114,7 +114,7 @@ struct SettingsView: View {
             .confirmationDialog("저장된 위치 정보를 모두 삭제할까요?", isPresented: $confirmClearLocations, titleVisibility: .visible) {
                 Button("위치 정보 삭제", role: .destructive) { clearLocations() }
             } message: {
-                Text("스택과 지출 기록은 그대로 남아요.")
+                Text("기록과 지출 내역은 그대로 남아요." + storeCopiesNote)
             }
             .confirmationDialog("백업으로 전체 교체할까요?", isPresented: $showImportConfirm, titleVisibility: .visible) {
                 Button("현재 데이터를 지우고 가져오기", role: .destructive) { applyImport() }
@@ -125,8 +125,10 @@ struct SettingsView: View {
             }
             .confirmationDialog("모든 데이터를 삭제할까요?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
                 Button("전체 삭제", role: .destructive) { deleteAll() }
+                Button("현재 데이터 먼저 내보내기") { prepareExport() }
+                Button("취소", role: .cancel) {}
             } message: {
-                Text("스택, 지출 기록, 카테고리가 모두 지워지고 되돌릴 수 없어요.")
+                Text("모든 기록, 지출 내역, 카테고리가 지워지고 되돌릴 수 없어요." + storeCopiesNote)
             }
             .alert("완료", isPresented: Binding(get: { infoMessage != nil }, set: { if !$0 { infoMessage = nil } })) {
                 Button("확인", role: .cancel) {}
@@ -144,10 +146,10 @@ struct SettingsView: View {
     /// 실제로 알림이 가지 않는 상태에서는 가는 것처럼 안내하지 않는다.
     private var reminderFooter: String {
         switch reminderAvailability {
-        case .active, .unknown: "정리하지 않은 스택이 있을 때만 알려드려요."
+        case .active, .unknown: "정리할 기록이 있을 때만 알려드려요."
         case .needsPermission: "알림 권한을 허용하면 이 시각에 알려드려요."
         case .blockedBySystem: "지금은 알림이 오지 않아요. 선택한 시각은 저장돼 있어서, 권한을 허용하면 바로 다시 예약돼요."
-        case .off: "알림을 꺼도 언제든 스택 탭에서 정리할 수 있어요."
+        case .off: "알림을 꺼도 언제든 기록 탭에서 정리할 수 있어요."
         }
     }
 
@@ -166,6 +168,13 @@ struct SettingsView: View {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             openURL(url)
         }
+    }
+
+    /// 앱 업데이트 때 남긴 이전 저장소 사본은 삭제 기능이 건드리지 않는다. 사본이 있을 때만 알린다.
+    private var storeCopiesNote: String {
+        Persistence.hasStoreCopies()
+            ? " 앱 업데이트에 대비해 이 iPhone에 남겨 둔 이전 기록 사본은 지워지지 않아요. 사본까지 모두 지우려면 앱을 삭제하세요."
+            : ""
     }
 
     private func prepareExport() {
@@ -196,14 +205,14 @@ struct SettingsView: View {
     private var importConfirmMessage: String {
         guard let payload = pendingImport else { return "" }
         return "병합하지 않고 전체를 바꿔요. 지금 기기의 \(currentDataSummary)이 모두 지워지고, "
-            + "백업의 스택 \(payload.stacks.count)개·지출 \(payload.transactions.count)건으로 바뀌어요. "
+            + "백업의 기록 \(payload.stacks.count)개·지출 \(payload.transactions.count)건으로 바뀌어요. "
             + "되돌릴 수 없으니 먼저 현재 데이터를 내보내 두는 걸 권해요."
     }
 
     private func summarizeCurrentData() -> String {
         let stacks = (try? context.fetchCount(FetchDescriptor<Stack>())) ?? 0
         let transactions = (try? context.fetchCount(FetchDescriptor<LedgerTransaction>())) ?? 0
-        return "스택 \(stacks)개·지출 \(transactions)건"
+        return "기록 \(stacks)개·지출 \(transactions)건"
     }
 
     private func applyImport() {
@@ -211,7 +220,7 @@ struct SettingsView: View {
         pendingImport = nil
         do {
             try BackupService.restore(payload, into: context)
-            infoMessage = "스택 \(payload.stacks.count)개, 지출 \(payload.transactions.count)건을 가져왔어요."
+            infoMessage = "기록 \(payload.stacks.count)개, 지출 \(payload.transactions.count)건을 가져왔어요."
         } catch {
             errorMessage = "가져오지 못했어요. 기존 데이터는 그대로 남아 있어요. (\(error.localizedDescription))"
         }
@@ -253,7 +262,7 @@ struct LockScreenGuideView: View {
         GuideList(steps: [
             "잠금화면을 길게 눌러 '사용자화'를 선택해요.",
             "잠금화면을 고른 뒤 아래쪽 컨트롤을 눌러 바꿔요.",
-            "컨트롤 목록에서 '단축어'를 추가하고 '스택 남기기'를 선택해요.",
+            "컨트롤 목록에서 '단축어'를 추가하고 앞에서 만든 '기록 남기기' 단축어를 선택해요.",
             "제어 센터에도 같은 방법으로 추가할 수 있어요.",
         ], footnote: "잠금화면 컨트롤은 iOS 18 이상에서 쓸 수 있어요.")
         .navigationTitle("잠금화면 컨트롤")

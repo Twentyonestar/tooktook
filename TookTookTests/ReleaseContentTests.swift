@@ -64,4 +64,14 @@ struct ReleaseContentTests {
         #expect(DefaultCategory.emoji(defaultKey: "unknown", symbol: "fork.knife") == nil)
         #expect(DefaultCategory.emoji(defaultKey: "food", symbol: "fork.knife") == "🍚")
     }
+
+    @Test func 저장소_사본이_있을_때만_삭제_안내에_알린다() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "copies-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        #expect(!Persistence.hasStoreCopies(in: directory)) // 폴더 없음 (새 설치)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        #expect(!Persistence.hasStoreCopies(in: directory)) // 빈 폴더
+        try FileManager.default.createDirectory(at: directory.appending(path: "before-2.0.0-x"), withIntermediateDirectories: true)
+        #expect(Persistence.hasStoreCopies(in: directory))
+    }
 }

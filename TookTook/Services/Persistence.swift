@@ -41,6 +41,14 @@ enum Persistence {
         return container
     }
 
+    /// 업데이트·열기 실패에 대비해 남긴 저장소 사본이 하나라도 있는지. 삭제 안내 문구에만 쓴다(사본은 지우지 않는다).
+    static func hasStoreCopies(in backupsDirectory: URL = defaultBackupsDirectory) -> Bool {
+        let folders = (try? FileManager.default.contentsOfDirectory(
+            at: backupsDirectory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles
+        )) ?? []
+        return !folders.isEmpty
+    }
+
     /// 저장소 파일(본체, -wal, -shm)을 날짜가 붙은 폴더에 **복사**한다. 원본은 건드리지 않는다.
     /// 저장소가 아직 없으면(첫 실행) 아무것도 하지 않는다.
     @discardableResult
@@ -84,7 +92,7 @@ enum StoreUnavailableError: LocalizedError {
     case notOpened
 
     var errorDescription: String? {
-        "기록 저장소를 열 수 없어 스택을 남기지 못했어요. 툭툭가계부를 열어 확인해 주세요."
+        "기록 저장소를 열 수 없어 기록을 남기지 못했어요. 툭툭가계부를 열어 확인해 주세요."
     }
 }
 
