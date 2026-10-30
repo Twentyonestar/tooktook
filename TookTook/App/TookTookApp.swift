@@ -8,6 +8,12 @@ struct TookTookApp: App {
     @AppStorage(PrefKey.appearance) private var appearance = Appearance.system.rawValue
     @State private var store = StoreController.shared
 
+    init() {
+        #if DEBUG
+        DemoData.installIfRequested()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {

@@ -259,6 +259,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "툭툭가계부";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "스택을 남긴 위치를 함께 저장해 나중에 어디서 쓴 돈인지 떠올릴 수 있도록 돕습니다. 위치 정보는 기기에만 저장됩니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -292,6 +293,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "툭툭가계부";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "스택을 남긴 위치를 함께 저장해 나중에 어디서 쓴 돈인지 떠올릴 수 있도록 돕습니다. 위치 정보는 기기에만 저장됩니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -1,0 +1,32 @@
+# App Store 출시 체크리스트 (툭툭가계부 1.0)
+
+## 준비 완료 (코드·파일)
+- [x] 임시 앱 아이콘 1024×1024, 투명도 없음 (`tools/make-temp-icon.swift`로 생성, 나중에 교체 가능)
+- [x] 개인정보 매니페스트 `TookTook/PrivacyInfo.xcprivacy`: 추적 없음, 수집 데이터 없음, UserDefaults(CA92.1)·파일 생성 날짜(C617.1) 사용 이유
+- [x] 암호화 신고 `ITSAppUsesNonExemptEncryption = NO`
+- [x] 버전 1.0 (1), 표시 이름 툭툭가계부, 카테고리 금융
+- [x] Release 빌드 확인: 매니페스트 포함, 테스트 픽스처·디버그 라이브러리 없음, 예시 데이터 코드는 DEBUG 전용이라 배포 빌드에 들어가지 않음
+- [x] 스크린샷 6.9인치 4장 `docs/appstore/screenshots/`
+- [x] 개인정보 처리방침 초안 `docs/appstore/privacy-policy.md`
+- [x] 앱 설명·키워드·심사 메모 `docs/appstore/listing.md`
+- [x] iCloud 동기화는 1.0에서 끔 (`cloudKitDatabase: .none`)
+
+## 사용자가 할 일
+1. [ ] 개발자 멤버십 활성화 확인 (developer.apple.com/account 에서 Pending이 사라질 때까지, 최대 48시간)
+2. [ ] Xcode › Settings › Apple Accounts 에서 유료 팀이 보이는지 확인 → Claude에게 알리기
+3. [ ] `privacy-policy.md` 마지막 줄에 문의 이메일을 적고, 노션 공개 페이지 등에 게시 → 주소를 Claude에게 알리기
+4. [ ] App Store Connect에서 새 앱 만들기 (`listing.md`의 값 사용)
+5. [ ] 업로드된 빌드를 TestFlight로 받아 실기기 확인
+6. [ ] 심사 제출
+
+## 유료 팀이 활성화되면 Claude가 할 일
+1. 서명 팀을 유료 팀 ID로 변경
+2. Archive → App Store Connect 업로드
+3. TestFlight 확인 항목 안내 (뒷면 탭, 알림, 위치)
+
+## 다시 스크린샷을 찍을 때
+```
+xcrun simctl status_bar <iPhone 17 Pro Max ID> override --time "9:41" --batteryState discharging --batteryLevel 100
+xcrun simctl launch <ID> com.twentyonestar.tooktook -TookTookDemo
+```
+`-TookTookDemo`는 DEBUG 빌드에서만, 기록이 없는 저장소에만 예시 데이터를 넣는다.
