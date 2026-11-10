@@ -49,5 +49,5 @@
 
 ## 8. 문의
 
-- 이메일: [문의 이메일을 여기에 적어 주세요]
+- 이메일: hanbyeol1230@gmail.com
 - GitHub: https://github.com/Twentyonestar/tooktook/issues
